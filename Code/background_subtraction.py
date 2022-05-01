@@ -24,7 +24,7 @@ def background_subtraction(input_video_path):
     parameters = utilis.get_video_parameters(cap)
     frames = utilis.load_video(cap)
     h, w = frames[0].shape[0],frames[0].shape[1]
-    fgbg = cv2.createBackgroundSubtractorMOG2(history=200,detectShadows=False,varThreshold=8)
+    fgbg = cv2.createBackgroundSubtractorKNN(history=200,detectShadows=False,dist2Threshold =400)
     #fgbg = cv2.bgsegm.createBackgroundSubtractorMOG2()
     subtracted_frames =[]
     #prev_frame= frames[0]
@@ -41,8 +41,8 @@ def background_subtraction(input_video_path):
             prev_frame= frames[frame_idx+constants.comperd_frames]
         except:
             prev_frame= frames[frame_idx-constants.comperd_frames]
-        prev_frame = cv2.GaussianBlur(prev_frame,(5,5),sigmaX=5)
-        blured_frame = cv2.GaussianBlur(frame,(5,5),sigmaX=5)
+        prev_frame = cv2.GaussianBlur(prev_frame,(5,5),sigmaX=0)
+        blured_frame = cv2.GaussianBlur(frame,(5,5),sigmaX=0)
         diff = cv2.subtract(blured_frame,prev_frame)
         diff2 = cv2.subtract(prev_frame,blured_frame)
         diff= abs(diff+diff2)
@@ -51,8 +51,19 @@ def background_subtraction(input_video_path):
         maskd_frame = frame.copy()
 
         #mybe add here a foor loop to go over the pixels
-        maskd_frame[fgmask< constants.Diff_Threshold ] =0
-        maskd_frame[diff> constants.Diff_Threshold] =0
+        #for i in range(h):
+        #    for j in range(w):
+        #        temp1= fgmask[i][j]
+        #        temp2= diff[i][j]>constants.Diff_Threshold
+        #        temp2= True in( temp2)
+        #        if (fgmask[i][j] <constants.Diff_Threshold and  temp2  ):
+        #            maskd_frame[i][j]=0
+
+        #maskd_frame[(fgmask< constants.Diff_Threshold).any() and (diff> constants.Diff_Threshold).any()] =0
+        maskd_frame[fgmask< constants.Diff_Threshold] =0
+        #temp = np.sum(maskd_frame>0)
+        maskd_frame[diff> 0] =0
+        #temp = np.sum(maskd_frame>0)
         
         #cv2.imshow('maskd_frame', maskd_frame)
         subtracted_frames.append(maskd_frame)

@@ -8,4 +8,4 @@ SMOOTH_RADIUS = 8
 
 '''  Background Subtraction CONST. '''
 Diff_Threshold = 80
-comperd_frames =20
+comperd_frames =50
