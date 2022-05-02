@@ -59,7 +59,7 @@ def stabalize_video(input_video_path,output_video_path):
 
             
             # Find transformation matrix
-            transform_matrix, _ = cv2.findHomography(prev_pts, curr_pts, cv2.RANSAC, 5.0)
+            transform_matrix, _ = cv2.findHomography(prev_pts, curr_pts, cv2.RANSAC, 10.0)
 
             transforms[frame_idx]= transform_matrix.flatten()
             prev_gray = curr_gray
