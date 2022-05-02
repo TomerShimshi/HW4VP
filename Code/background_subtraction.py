@@ -27,27 +27,39 @@ def background_subtraction(input_video_path):
     fgbg = cv2.createBackgroundSubtractorKNN(history=200,detectShadows=False,dist2Threshold =400)
     #fgbg = cv2.bgsegm.createBackgroundSubtractorMOG2()
     subtracted_frames =[]
-    #prev_frame= frames[0]
-    #prev_frame= frames[constants.comperd_frames]
-    #prev_frame = cv2.GaussianBlur(prev_frame,(5,5),sigmaX=3)
+   
     print('started bg subtraction')
     pbar = tqdm.tqdm(total=n_frames-1)
-    bg=255*np.ones((frames[0].shape))
-    for frame_idx, frame in enumerate( frames[:]):
+    '''
+    now we try a diffrent approach
+    '''
+    #background = np.median(frames[0:constants.comperd_frames] ,axis=0)
+    #background = background.astype(np.uint8)
+    for frame_idx, frame in enumerate( frames):
         fgmask = fgbg.apply(frame)
         #fgmask = fgmask.astype(np.uint8)
         #find the diff between the 2 frames
+        
+        
         try:
-            prev_frame= frames[frame_idx+constants.comperd_frames]
+            #prev_frame= 0.5*frames[frame_idx+constants.comperd_frames] + 0.5*frames[frame_idx+constants.comperd_frames+1]
+            #prev_frame += float((1/constants.comperd_frames))*frames[frame_idx+i]
+            background = np.mean(frames[frame_idx:frame_idx+constants.comperd_frames] ,axis=0)
         except:
-            prev_frame= frames[frame_idx-constants.comperd_frames]
-        prev_frame = cv2.GaussianBlur(prev_frame,(5,5),sigmaX=0)
-        blured_frame = cv2.GaussianBlur(frame,(5,5),sigmaX=0)
-        diff = cv2.subtract(blured_frame,prev_frame)
-        diff2 = cv2.subtract(prev_frame,blured_frame)
-        diff= abs(diff+diff2)
-        diff[abs(diff)<constants.Diff_Threshold]=0
-        gray = cv2.cvtColor(diff.astype(np.uint8), cv2.COLOR_BGR2GRAY)
+            #prev_frame= 0.5*frames[frame_idx-constants.comperd_frames] +0.5*frames[frame_idx-constants.comperd_frames-1]
+            #prev_frame += (1/constants.comperd_frames)*frames[frame_idx-i]
+            background = np.mean((frames[frame_idx-constants.comperd_frames:frame_idx+constants.comperd_frames]) ,axis=0)
+        #prev_frame = cv2.cvtColor(prev_frame, cv2.COLOR_BGR2GRAY) 
+        
+        background = cv2.GaussianBlur(background,(5,5),sigmaX=constants.bluer_sigma).astype(np.uint8)
+        blured_frame = cv2.GaussianBlur(frame,(5,5),sigmaX=constants.bluer_sigma)
+        #blured_frame = cv2.cvtColor(blured_frame, cv2.COLOR_BGR2GRAY)
+        diff = cv2.absdiff(blured_frame,background)
+        #diff2 = cv2.subtract(prev_frame,blured_frame)
+        #diff= abs(diff+diff2)
+        #used to be minus
+        #diff[abs(diff)>constants.Diff_Threshold]=0
+        gray_diff = cv2.cvtColor(diff.astype(np.uint8), cv2.COLOR_BGR2GRAY)
         maskd_frame = frame.copy()
 
         #mybe add here a foor loop to go over the pixels
@@ -60,17 +72,23 @@ def background_subtraction(input_video_path):
         #            maskd_frame[i][j]=0
 
         #maskd_frame[(fgmask< constants.Diff_Threshold).any() and (diff> constants.Diff_Threshold).any()] =0
-        maskd_frame[fgmask< constants.Diff_Threshold] =0
+        temp1 = [fgmask< constants.filter_Threshold][0]
+        temp2 = np.where(gray_diff>constants.Diff_Threshold,True,False)
+        temp3 = np.where(temp2 == temp1,True,False)
+        temp3[fgmask< constants.filter_Threshold] = False #= np.where(temp3 == temp1,True,False)
+        #maskd_frame[fgmask< constants.Diff_Threshold] =0
+        maskd_frame[ temp1] =0
         #temp = np.sum(maskd_frame>0)
-        maskd_frame[diff> 0] =0
+        #maskd_frame[diff<constants.Diff_Threshold] =0
         #temp = np.sum(maskd_frame>0)
         
         #cv2.imshow('maskd_frame', maskd_frame)
         subtracted_frames.append(maskd_frame)
-        prev_frame =blured_frame#(prev_frame*0.5 +frame*0.5).astype(np.uint8)
+        #prev_frame =blured_frame#(prev_frame*0.5 +frame*0.5).astype(np.uint8)
         pbar.update(1)
     utilis.release_video(cap)
     utilis.write_video('Outputs\extracted_{}_{}.avi'.format(ID1,ID2),parameters=parameters,frames=subtracted_frames,isColor=True)
+    print('finished bg subtraction')
 
 
     '''
