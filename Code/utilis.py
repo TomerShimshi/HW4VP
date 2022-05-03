@@ -59,8 +59,9 @@ def load_video(cap,wanted_colors = 'bgr'):
 def color_to_gray(frames):
         gray_frames = []
         for frame in frames:
+            temp1= cv2.cvtColor(frame.astype(np.uint8), cv2.COLOR_BGR2GRAY)
             gray_frames.append(cv2.cvtColor(frame.astype(np.uint8), cv2.COLOR_BGR2GRAY))
-        return np.asarray(frames)
+        return np.asarray(gray_frames)
 
 
 def release_video(cap):
