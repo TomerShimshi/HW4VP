@@ -108,4 +108,8 @@ def fixBorder(frame):
   frame = cv2.warpAffine(frame, T, (s[1], s[0]))
   return frame
 
+
+def norm_pdf(x,mean,sigma):
+    return (1/(np.sqrt(2*3.14)*sigma))*(np.exp(-0.5*(((x-mean)/sigma)**2)))
+
     

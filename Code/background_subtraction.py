@@ -17,7 +17,6 @@ ID2 = 320521461
 my_logger = logging.getLogger('MyLogger')
 
 def background_subtraction(input_video_path):
-
     my_logger.info('Starting background_subtraction')
     cap = cv2.VideoCapture(input_video_path)
     n_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
@@ -26,10 +25,10 @@ def background_subtraction(input_video_path):
     gray_frames = utilis.color_to_gray(frames=frames)
     (col,row) = gray_frames[0].shape[:2]
     var = np.ones((col,row),np.uint8)
-    var[:col,:row] = 150
-    mean = gray_frames[0]
+    var[:col,:row] = 50
+    mean = np.mean(gray_frames[:180],axis=0).astype(np.uint8)
     count =0
-    #fgbg = cv2.createBackgroundSubtractorKNN(history=50,detectShadows=False,dist2Threshold =20)
+    fgbg = cv2.createBackgroundSubtractorKNN()#history=10,detectShadows=False,dist2Threshold =20)
     #fgbg = cv2.bgsegm.createBackgroundSubtractorMOG2()
     subtracted_frames =[]
     #background = np.median(frames[:constants.comperd_frames] ,axis=0)
@@ -68,13 +67,19 @@ def background_subtraction(input_video_path):
         #erode = cv2.erode(forground,kernel,iterations =constants.Num_Of_Iter)
         erode =cv2.morphologyEx(forground, cv2.MORPH_OPEN, kernel,iterations=constants.Num_Of_Iter)
         erode =cv2.morphologyEx(erode, cv2.MORPH_CLOSE, kernel)
+        #temp = gray_frames[frame_idx]
+        #temp[erode == 0] = 0
+        #fgmask = fgbg.apply(temp)
         maskd_frame = frame.copy()
         maskd_frame[erode == 0] = 0
+        
+        #maskd_frame[fgmask< constants.Diff_Threshold] =0
+
         subtracted_frames.append(maskd_frame)
         #prev_frame =blured_frame#(prev_frame*0.5 +frame*0.5).astype(np.uint8)
         pbar.update(1)
     utilis.release_video(cap)
-    utilis.write_video('Outputs\extracted_{}_{}.avi'.format(ID1,ID2),parameters=parameters,frames=subtracted_frames,isColor=True)
+    utilis.write_video('Outputs\extracted_{}_{}_num_of_iter{}_trshehold_{}_alpha_{}_mean_thresh{}_var_thresh{}.avi'.format(ID1,ID2,constants.Num_Of_Iter,constants.Diff_Threshold,constants.alpha,constants.Mean_Threshold,constants.Var_Threshold),parameters=parameters,frames=subtracted_frames,isColor=True)
     print('finished bg subtraction')
 
 

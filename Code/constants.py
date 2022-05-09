@@ -7,12 +7,12 @@ SMOOTH_RADIUS = 10
 
 
 '''  Background Subtraction CONST. '''
-Diff_Threshold = 2.0
+Diff_Threshold = 5
 upper_Threshold =50
 filter_Threshold=100
 comperd_frames =30
 bluer_sigma = 8
-alpha = 0.25
-Mean_Threshold =22.5
-Var_Threshold =18.5
-Num_Of_Iter = 9
+alpha = 0.15
+Mean_Threshold =2.5
+Var_Threshold =2.5
+Num_Of_Iter = 15
