@@ -25,8 +25,9 @@ def background_subtraction(input_video_path):
     gray_frames = utilis.color_to_gray(frames=frames)
     (col,row) = gray_frames[0].shape[:2]
     var = np.ones((col,row),np.uint8)
-    var[:col,:row] = 50
-    mean = np.mean(gray_frames[:180],axis=0).astype(np.uint8)
+    #var[:col,:row] = 50
+    var = np.var(frames[:190],axis=0).astype(np.uint8)#gray_frames[:190],axis=0).astype(np.uint8)
+    mean = np.mean(frames[:190],axis=0).astype(np.uint8)#gray_frames[:190],axis=0).astype(np.uint8)
     count =0
     fgbg = cv2.createBackgroundSubtractorKNN()#history=10,detectShadows=False,dist2Threshold =20)
     #fgbg = cv2.bgsegm.createBackgroundSubtractorMOG2()
@@ -46,12 +47,12 @@ def background_subtraction(input_video_path):
 
         alpha= constants.alpha
 
-        new_mean = (1-alpha)*mean + alpha*gray_frames[frame_idx]       
+        new_mean = (1-alpha)*mean + alpha*frame#gray_frames[frame_idx]       
         new_mean = new_mean.astype(np.uint8)
         
-        new_var = (alpha)*(cv2.subtract(gray_frames[frame_idx],mean)**2) + (1-alpha)*(var)
+        new_var = (alpha)*(cv2.subtract(frame,mean)**2) + (1-alpha)*(var)#gray_frames[frame_idx],mean)**2) + (1-alpha)*(var)
 
-        value  = cv2.absdiff(gray_frames[frame_idx],mean)
+        value  = cv2.absdiff(frame,mean)#gray_frames[frame_idx],mean)
         value = value /np.sqrt(var)
        
         
@@ -59,14 +60,26 @@ def background_subtraction(input_video_path):
         var = np.where(value < constants.Var_Threshold,new_var,var)
         a = np.uint8([255])
         b = np.uint8([0])
-        background =np.where(value < constants.Diff_Threshold,gray_frames[frame_idx],0)
-        forground = np.where(value>=constants.Diff_Threshold,gray_frames[frame_idx],b)
-        #cv2.imshow('background',background)       
-        kernel = np.ones((5,5),np.uint8)
+        Threshold= constants.Diff_Threshold
+        if frame_idx <= n_frames//3:
+            Threshold-=2
+        else:
+           Threshold+=2 
         
-        #erode = cv2.erode(forground,kernel,iterations =constants.Num_Of_Iter)
-        erode =cv2.morphologyEx(forground, cv2.MORPH_OPEN, kernel,iterations=constants.Num_Of_Iter)
-        erode =cv2.morphologyEx(erode, cv2.MORPH_CLOSE, kernel)
+        background =np.where(value < Threshold,frames[frame_idx],0)#gray_frames[frame_idx],0)
+        forground = np.where(value>=Threshold,frames[frame_idx],b)#gray_frames[frame_idx],b)
+        #cv2.imshow('background',background)       
+        kernel = np.asarray([[0, 0, 1, 0, 0],
+       [0, 0, 1, 0, 0],
+       [0, 1, 1, 1, 0],
+       [0, 1, 1, 1, 0],
+       [0, 0, 1, 0, 0]]).astype(np.uint8) #cv2.getStructuringElement(cv2.MORPH_CROSS,(5,5)) #np.ones((5,5),np.uint8)
+        
+        erode = cv2.erode(forground,kernel,iterations =constants.Num_Of_Iter)
+        erode = cv2.dilate(erode, kernel, iterations=int(constants.Num_Of_Iter*1.5))
+        #erode =cv2.morphologyEx(forground, cv2.MORPH_OPEN, kernel,iterations=constants.Num_Of_Iter)
+        #erode =cv2.morphologyEx(erode, cv2.MORPH_CLOSE, kernel)
+        #erode = cv2.dilate(erode,kernel,iterations = 6)
         #temp = gray_frames[frame_idx]
         #temp[erode == 0] = 0
         #fgmask = fgbg.apply(temp)
