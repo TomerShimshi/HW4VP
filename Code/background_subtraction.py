@@ -26,10 +26,10 @@ def background_subtraction(input_video_path):
     (col,row) = gray_frames[0].shape[:2]
     var = np.ones((col,row),np.uint8)
     #var[:col,:row] = 50
-    var = np.var(frames[:190],axis=0).astype(np.uint8)#gray_frames[:190],axis=0).astype(np.uint8)
-    mean = np.mean(frames[:190],axis=0).astype(np.uint8)#gray_frames[:190],axis=0).astype(np.uint8)
+    var = np.var(frames[:50],axis=0).astype(np.uint8)#gray_frames[:190],axis=0).astype(np.uint8)
+    mean = np.mean(frames[:50],axis=0).astype(np.uint8)#gray_frames[:190],axis=0).astype(np.uint8)
     count =0
-    fgbg = cv2.createBackgroundSubtractorKNN()#history=10,detectShadows=False,dist2Threshold =20)
+    fgbg = cv2.createBackgroundSubtractorKNN(history=500,detectShadows=False,dist2Threshold =400.0)
     #fgbg = cv2.bgsegm.createBackgroundSubtractorMOG2()
     subtracted_frames =[]
     #background = np.median(frames[:constants.comperd_frames] ,axis=0)
@@ -43,7 +43,7 @@ def background_subtraction(input_video_path):
     #background = np.median(frames[0:constants.comperd_frames] ,axis=0)
     #background = background.astype(np.uint8)
     
-    for frame_idx, frame in enumerate( frames[1:]):
+    for frame_idx, frame in enumerate( frames):
 
         alpha= constants.alpha
 
@@ -54,6 +54,7 @@ def background_subtraction(input_video_path):
 
         value  = cv2.absdiff(frame,mean)#gray_frames[frame_idx],mean)
         value = value /np.sqrt(var)
+        
        
         
         mean = np.where(value < constants.Mean_Threshold,new_mean,mean)
@@ -65,18 +66,31 @@ def background_subtraction(input_video_path):
             Threshold-=2
         else:
            Threshold+=2 
-        
-        background =np.where(value < Threshold,frames[frame_idx],0)#gray_frames[frame_idx],0)
-        forground = np.where(value>=Threshold,frames[frame_idx],b)#gray_frames[frame_idx],b)
-        #cv2.imshow('background',background)       
+        fgmask = fgbg.apply(frame)
+        value = value[:,:,0]+value[:,:,1]+value[:,:,2]
+        background =np.where(value < Threshold,gray_frames[frame_idx],0)
+        forground = np.where(value>=Threshold,gray_frames[frame_idx],b)
+        #cv2.imshow('background',background)  
+        '''    
         kernel = np.asarray([[0, 0, 1, 0, 0],
-       [0, 0, 1, 0, 0],
+       [0,0, 1, 1, 1, 0,0],
        [0, 1, 1, 1, 0],
        [0, 1, 1, 1, 0],
        [0, 0, 1, 0, 0]]).astype(np.uint8) #cv2.getStructuringElement(cv2.MORPH_CROSS,(5,5)) #np.ones((5,5),np.uint8)
-        
-        erode = cv2.erode(forground,kernel,iterations =constants.Num_Of_Iter)
-        erode = cv2.dilate(erode, kernel, iterations=int(constants.Num_Of_Iter*1.5))
+       ''' 
+        kernel = np.asarray([[0,0, 0, 1, 0, 0,0],
+        [0,0, 0, 1, 0, 0,0],
+        [0,0, 1, 1, 1, 0,0],
+        [0,0, 1, 1, 1, 0,0],
+        [0,0, 1, 1, 1, 0,0],
+        [0,0, 0, 1, 0, 0,0],
+        [0,0, 0, 1, 0, 0,0]]).astype(np.uint8) #cv2.getStructuringElement(cv2.MORPH_CROSS,(5,5)) #np.ones((5,5),np.uint8)
+        erode = cv2.erode(fgmask,kernel,iterations =constants.Num_Of_Iter)#forground,kernel,borderType=cv2.BORDER_REFLECT,iterations =constants.Num_Of_Iter)
+        erode = cv2.dilate(erode, kernel, iterations=int(constants.Num_Of_Iter*0.85))
+        num_non_zeros = np.count_nonzero(erode,   keepdims=False)
+        if num_non_zeros< 30:
+            erode = cv2.erode(fgmask,kernel,iterations =int(constants.Num_Of_Iter*0.75))#forground,kernel,borderType=cv2.BORDER_REFLECT,iterations =constants.Num_Of_Iter)
+            erode = cv2.dilate(erode, kernel, iterations=int(constants.Num_Of_Iter*1.5))
         #erode =cv2.morphologyEx(forground, cv2.MORPH_OPEN, kernel,iterations=constants.Num_Of_Iter)
         #erode =cv2.morphologyEx(erode, cv2.MORPH_CLOSE, kernel)
         #erode = cv2.dilate(erode,kernel,iterations = 6)
