@@ -263,3 +263,39 @@ def background_subtraction(input_video_path):
         #cv2.imshow('maskd_frame', maskd_frame)
     
     '''
+
+
+    '''
+        alpha= constants.alpha
+
+        new_mean = (1-alpha)*mean + gray_frames[frame_idx] #alpha*frame#gray_frames[frame_idx]       
+        new_mean = new_mean.astype(np.uint8)
+        
+        new_var = (alpha)*(cv2.subtract(gray_frames[frame_idx],mean)**2) + (1-alpha)*(var)#frame,mean)**2) + #(1-alpha)*(var)#gray_frames[frame_idx],mean)**2) + (1-alpha)*(var)
+
+        value  = cv2.absdiff(gray_frames[frame_idx],mean)#frame,mean)#gray_frames[frame_idx],mean)
+        value = value /np.sqrt(var)
+        
+       
+        
+        mean = np.where(value < constants.Mean_Threshold,new_mean,mean)
+        var = np.where(value < constants.Var_Threshold,new_var,var)
+        a = np.uint8([255])
+        b = np.uint8([0])
+        Threshold= constants.Diff_Threshold
+        if frame_idx <= n_frames//3:
+            Threshold-=2
+        else:
+           Threshold+=2 
+        
+        #value = value[:,:,0]+value[:,:,1]+value[:,:,2]
+        background =np.where(value < Threshold,gray_frames[frame_idx],0)
+        forground = np.where(value>=Threshold,gray_frames[frame_idx],b)
+        #cv2.imshow('background',background)  
+           
+        kernel = np.asarray([[0, 0, 1, 0, 0],
+       [0,0, 1, 1, 1, 0,0],
+       [0, 1, 1, 1, 0],
+       [0, 1, 1, 1, 0],
+       [0, 0, 1, 0, 0]]).astype(np.uint8) #cv2.getStructuringElement(cv2.MORPH_CROSS,(5,5)) #np.ones((5,5),np.uint8)
+    ''' 
