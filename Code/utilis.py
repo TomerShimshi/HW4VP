@@ -47,11 +47,11 @@ def load_video(cap,wanted_colors = 'bgr'):
         if wanted_colors == 'bgr':
             frames.append(frame)
         elif wanted_colors == 'yuv':
-            frames.append(cv2.cvtColor(ret, cv2.COLOR_BGR2YUV))
+            frames.append(cv2.cvtColor(frame, cv2.COLOR_BGR2YUV))
         elif wanted_colors == 'bw':
-            frames.append(cv2.cvtColor(ret, cv2.COLOR_BGR2GRAY))
+            frames.append(cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY))
         else:
-            frames.append(cv2.cvtColor(ret, cv2.COLOR_BGR2HSV))
+            frames.append(cv2.cvtColor(frame, cv2.COLOR_BGR2HSV))
         continue
     cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
     return np.asarray(frames) 
@@ -109,7 +109,23 @@ def fixBorder(frame):
   return frame
 
 
-def norm_pdf(x,mean,sigma):
-    return (1/(np.sqrt(2*3.14)*sigma))*(np.exp(-0.5*(((x-mean)/sigma)**2)))
+def choose_randome_indecis(mask,num_of_indecis, find_fg = True):
+    if find_fg:
+        indices = np.where(mask==1)
+    else:
+        indices = np.where(mask==0)
+    if len(indices[0])==0:
+        return np.column_stack((indices[0],indices[1]))
+    idx_chosed = np.random.choice(len(indices[0]))
+    return np.column_stack((indices[0][idx_chosed],indices[1][idx_chosed]))
+
+def estimate_pdf (dataset_valus, bw_method):
+    pdf = gaussian_kde(dataset=dataset_valus,bw_method=bw_method)
+    return lambda x: pdf(x.T)
+
+
+
+
+
 
     
