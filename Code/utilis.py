@@ -1,3 +1,4 @@
+from pickletools import uint8
 import numpy as np
 import cv2
 from scipy.stats import gaussian_kde
@@ -120,8 +121,23 @@ def choose_randome_indecis(mask,num_of_indecis, find_fg = True):
     return np.column_stack((indices[0][idx_chosed],indices[1][idx_chosed]))
 
 def estimate_pdf (dataset_valus, bw_method):
-    pdf = gaussian_kde(dataset=dataset_valus,bw_method=bw_method)
+    pdf = gaussian_kde(dataset=dataset_valus.T,bw_method=bw_method)
     return lambda x: pdf(x.T)
+
+def  check_if_in_dic(dic,element,func):
+    if element in dic:
+        return dic[element]
+    dic[element] = func(np.asanyarray(element))[0]
+    return dic[element]
+
+def scale_fig_0_to_255(input_martix):
+    if type(input_martix) == np.bool:
+        input_martix =  np.uint8(input_martix)
+    input_martix = input_martix.astype(uint8)
+    scaled = 255*(input_martix-np.min(input_martix))/np.ptp(input_martix)
+    return np.uint8(scaled)
+
+
 
 
 
