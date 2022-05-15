@@ -55,7 +55,7 @@ def background_subtraction(input_video_path):
         num_non_zeros = np.count_nonzero(fgmask,   keepdims=False)
         if num_non_zeros > 2003600:
            value=  cv2.absdiff(gray_frames[frame_idx],mean)
-           fgmask = np.where(value>=constants.filter_Threshold,gray_frames[frame_idx],0)
+           fgmask = np.where(value>=200,gray_frames[frame_idx],0)
         num_non_zeros = np.count_nonzero(fgmask,   keepdims=False)
         kernel = np.asarray([[0,0, 0, 4, 0, 0,0],
         [0,0, 2, 3, 2, 0,0],
@@ -79,7 +79,7 @@ def background_subtraction(input_video_path):
         [0,0, 0, 3, 0, 0,0],
         [0,0, 0, 3, 0, 0,0],
         [0,0, 0, 3, 0, 0,0]]).astype(np.uint8)
-        erode = cv2.erode(fgmask,kernel,iterations =constants.Num_Of_Iter)#forground,kernel,borderType=cv2.BORDER_REFLECT,iterations =constants.Num_Of_Iter)
+        erode = cv2.erode(fgmask,kernel,iterations =5)#forground,kernel,borderType=cv2.BORDER_REFLECT,iterations =constants.Num_Of_Iter)
         
         idx = np.where(erode>0)
         temp = [(idx[0][i],idx[1][i]) for i in range (len(idx[0])) ]
@@ -90,12 +90,12 @@ def background_subtraction(input_video_path):
         mean_location = temp.mean(0)
         #[point[0],point[1]]
         try:
-            shuff = [[point[0],point[1]] for point in temp if ((abs(point[0] - mean_location[0])>constants.Mean_Threshold or abs(point[1] - mean_location[1]))>constants.Diff_Threshold or  ((abs(point[0] - prev_mean[0])> constants.Mean_Threshold +10 or abs(point[1] - prev_mean[1]))>constants.Diff_Threshold+30.0)) and point[1] <1080 ]#np.linalg.norm(point - mean)<100]
+            shuff = [[point[0],point[1]] for point in temp if ((abs(point[0] - mean_location[0])>50 or abs(point[1] - mean_location[1]))>50 or  ((abs(point[0] - prev_mean[0])> constants.Mean_Threshold +10 or abs(point[1] - prev_mean[1]))>50+30.0)) and point[1] <1080 ]#np.linalg.norm(point - mean)<100]
             shuff= np.asarray(shuff)
         except:
             
 
-            shuff = [[point[0],point[1]] for point in temp if ((abs(point[0] - mean_location[0])>constants.Mean_Threshold or abs(point[1] - mean_location[1]))>constants.Diff_Threshold) and point[1] <1080]#np.linalg.norm(point - mean)<100]
+            shuff = [[point[0],point[1]] for point in temp if ((abs(point[0] - mean_location[0])>50 or abs(point[1] - mean_location[1]))>50) and point[1] <1080]#np.linalg.norm(point - mean)<100]
             shuff= np.asarray(shuff)
 
         #temp = shuff.shape()
@@ -103,12 +103,12 @@ def background_subtraction(input_video_path):
             erode[shuff] = 0
             
         #print(idx)
-        erode = cv2.dilate(erode, kernel_dial, iterations=int(constants.Num_Of_Iter*1))
+        erode = cv2.dilate(erode, kernel_dial, iterations=int(5))
         num_non_zeros = np.count_nonzero(erode,   keepdims=False)
         #if num_non_zeros< 50:
         #    erode = cv2.erode(fgmask,kernel,iterations =int(constants.Num_Of_Iter*0.75))#forground,kernel,borderType=cv2.BORDER_REFLECT,iterations =constants.Num_Of_Iter)
         #    erode = cv2.dilate(erode, kernel_dial, iterations=int(constants.Num_Of_Iter*4))
-        erode[600:,:]= cv2.dilate(erode[600:,:], kernel_leg, iterations=int(constants.Num_Of_Iter*1))
+        erode[600:,:]= cv2.dilate(erode[600:,:], kernel_leg, iterations=int(5))
         num_non_zeros = np.count_nonzero(erode,   keepdims=False)
        
         maskd_frame = frame.copy()
@@ -122,7 +122,7 @@ def background_subtraction(input_video_path):
         #prev_frame =blured_frame#(prev_frame*0.5 +frame*0.5).astype(np.uint8)
         pbar.update(1)
     utilis.release_video(cap)
-    utilis.write_video('Outputs\extracted_{}_{}_num_of_iter{}_trshehold_{}_alpha_{}_mean_thresh{}_var_thresh{}.avi'.format(ID1,ID2,constants.Num_Of_Iter,constants.Diff_Threshold,constants.alpha,constants.Mean_Threshold,constants.Var_Threshold),parameters=parameters,frames=subtracted_frames,isColor=True)
+    utilis.write_video('Outputs\extracted_{}_{}.avi'.format(ID1,ID2),parameters=parameters,frames=subtracted_frames,isColor=True)
     print('finished bg subtraction')
 
 

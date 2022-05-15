@@ -117,7 +117,7 @@ def choose_randome_indecis(mask,num_of_indecis, find_fg = True):
         indices = np.where(mask==0)
     if len(indices[0])==0:
         return np.column_stack((indices[0],indices[1]))
-    idx_chosed = np.random.choice(len(indices[0]))
+    idx_chosed = np.random.choice(len(indices[0]),size=num_of_indecis)
     return np.column_stack((indices[0][idx_chosed],indices[1][idx_chosed]))
 
 def estimate_pdf (dataset_valus, bw_method):
@@ -136,6 +136,13 @@ def scale_fig_0_to_255(input_martix):
     input_martix = input_martix.astype(uint8)
     scaled = 255*(input_martix-np.min(input_martix))/np.ptp(input_martix)
     return np.uint8(scaled)
+
+def use_mask_on_frame(frame,mask):
+    masked_frame = np.copy(frame)
+    masked_frame[:,:,0]= masked_frame[:,:,0]*mask
+    masked_frame[:,:,1]= masked_frame[:,:,1]*mask
+    masked_frame[:,:,2]= masked_frame[:,:,2]*mask
+    return masked_frame
 
 
 
