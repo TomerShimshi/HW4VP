@@ -31,7 +31,7 @@ def background_subtraction(input_video_path):
     mask_list = np.zeros((n_frames,parameters["height"],parameters['width']))
     print('started studing frames history')
     pbar = tqdm.tqdm(total=12*n_frames)
-    for i in range(5):
+    for i in range(12):
         for frame_idx, frame in enumerate(frames_hsv):
             frame_hsv= frame[:,:,1:]
             fg_mask = fgbg.apply(frame_hsv)
@@ -68,8 +68,8 @@ def background_subtraction(input_video_path):
         temp =np.max(blue_mask)
         person_and_blue_mask =(blue_mask*person_mask).astype(np.uint8)
         temp =np.max(person_and_blue_mask)
-        fg_indices = utilis.choose_randome_indecis(person_and_blue_mask,20,True)
-        bg_indices = utilis.choose_randome_indecis(person_and_blue_mask,20,False)
+        fg_indices = utilis.choose_randome_indecis(person_and_blue_mask,22,True)
+        bg_indices = utilis.choose_randome_indecis(person_and_blue_mask,22,False)
         #$$$$$$$$$$$$ Mybe need to find ccolors for the shoes $$$$$$$$$$$$
         person_and_blue_mask_list[frame_idx] = person_and_blue_mask
         temp =np.max(person_and_blue_mask)
