@@ -30,7 +30,7 @@ def background_subtraction(input_video_path):
     fgbg = cv2.createBackgroundSubtractorKNN(history=800,detectShadows=False,dist2Threshold =90.0)
     mask_list = np.zeros((n_frames,parameters["height"],parameters['width']))
     num_iter = 5
-    num_frames_cut =40
+    num_frames_cut =205
     print('started studing frames history')
     pbar = tqdm.tqdm(total=num_iter*n_frames)
     for i in range(num_iter):
@@ -84,10 +84,19 @@ def background_subtraction(input_video_path):
         #$$$$$$$$$%%%%%%% NOW WE ADD FACE MASK#######$$$$$$$$%%%%%%%%
         face_mask =  person_and_blue_mask.copy()
         face_mask[constants.FACE_HIGHT:,:]=0
+        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(5,5))
+        face_mask = cv2.morphologyEx(face_mask, cv2.MORPH_OPEN, kernel,iterations=1)
         face_mask_idx = np.where(face_mask == 1)
-        y_mean_face, x_mean_face = int(np.mean(face_mask_idx[0])), int(np.mean(face_mask_idx[1])) 
-        fg_face_indices = utilis.choose_randome_indecis(face_mask,22,True)
-        bg_face_indices = utilis.choose_randome_indecis(face_mask,80,False)
+        y_mean_face, x_mean_face = int(np.mean(face_mask_idx[0])), int(np.mean(face_mask_idx[1]))
+        ### minimize the face mask window to compute the face 
+        ##$$%$ Bg better
+        #small_face_mask =  np.zeros((frame.shape))
+        #first we copy again since the face mask has changed
+        #face_mask =  person_and_blue_mask.copy()
+        small_face_mask= face_mask[max(0, y_mean_face - constants.FACE_WINDOW_H // 2):min(h, y_mean_face +  constants.FACE_WINDOW_H // 2),
+                                  max(0, x_mean_face - constants.FACE_WINDOW_W // 2):min(w, x_mean_face +  constants.FACE_WINDOW_W // 2)]
+        fg_face_indices = utilis.choose_randome_indecis(small_face_mask,22,True)
+        bg_face_indices = utilis.choose_randome_indecis(small_face_mask,80,False)
         temp =np.max(person_and_blue_mask)
         if fg_colors is None:
             fg_colors = frame[fg_indices[:,0],fg_indices[:,1]]
@@ -168,7 +177,7 @@ def background_subtraction(input_video_path):
             ,map(tuple,small_frame_bgr[small_prob_fg_bigger_bg_mask_idx])), dtype= float)
         #shoes_fg_beats_shoes_bg_mask= (small_shoes_fg_prob_stacked/(small_shoes_bg_prob_stacked+small_shoes_fg_prob_stacked)).astype(np.uint8)
         shoes_fg_beats_shoes_bg_mask= (small_shoes_fg_prob_stacked/(small_shoes_bg_prob_stacked+small_shoes_fg_prob_stacked))
-        shoes_fg_beats_shoes_bg_mask=(shoes_fg_beats_shoes_bg_mask>0.55).astype(np.uint8)
+        shoes_fg_beats_shoes_bg_mask=(shoes_fg_beats_shoes_bg_mask>0.65).astype(np.uint8)
         small_shoes_probs_fg_bigger_bg_mask[small_prob_fg_bigger_bg_mask_idx] = shoes_fg_beats_shoes_bg_mask
         shoes_idx = np.where(small_shoes_probs_fg_bigger_bg_mask == 1)
         y_mean_shoes,x_mean_shoes = (np.mean(shoes_idx[0]).astype(int),np.mean(shoes_idx[1]).astype(int))
@@ -184,8 +193,8 @@ def background_subtraction(input_video_path):
         small_face_bg_prob_stacked = np.fromiter(map(lambda elem:utilis.check_if_in_dic(bg_face_pdf_memo,elem,bg_face_pdf)
             ,map(tuple,small_frame_bgr[small_prob_fg_bigger_bg_mask_face_idx])), dtype= float)
         #shoes_fg_beats_shoes_bg_mask= (small_shoes_fg_prob_stacked/(small_shoes_bg_prob_stacked+small_shoes_fg_prob_stacked)).astype(np.uint8)
-        face_fg_beats_face_bg_mask= (small_face_fg_prob_stacked/(small_face_bg_prob_stacked+small_face_fg_prob_stacked))
-        face_fg_beats_face_bg_mask=(face_fg_beats_face_bg_mask>0.65).astype(np.uint8)
+        #face_fg_beats_face_bg_mask= (small_face_fg_prob_stacked/(small_face_bg_prob_stacked+small_face_fg_prob_stacked))
+        face_fg_beats_face_bg_mask=(small_face_fg_prob_stacked>small_face_bg_prob_stacked).astype(np.uint8)
         small_face_probs_fg_bigger_bg_mask[small_prob_fg_bigger_bg_mask_face_idx] = face_fg_beats_face_bg_mask
         face_idx = np.where(small_face_probs_fg_bigger_bg_mask == 1)
         y_mean_face,x_mean_shoes = (np.mean(face_idx[0]).astype(int),np.mean(face_idx[1]).astype(int))
@@ -206,9 +215,9 @@ def background_subtraction(input_video_path):
         small_or_mask = np.zeros(small_probs_fg_bigger_bg_mask.shape)
 
         #small_or_mask = small_probs_fg_bigger_bg_mask
-        small_or_mask[:y_mean_face,:]=np.minimum(small_face_probs_fg_bigger_bg_mask[:y_mean_face,:],small_probs_fg_bigger_bg_mask[:y_mean_face,:] )
-        small_or_mask[y_mean_face:y_mean_shoes,:]=np.maximum(small_face_probs_fg_bigger_bg_mask[y_mean_face:y_mean_shoes,:],
-                                                   small_probs_fg_bigger_bg_mask[y_mean_face:y_mean_shoes,:] )
+        small_or_mask[:constants.FACE_HIGHT,:]=np.minimum(small_face_probs_fg_bigger_bg_mask[:constants.FACE_HIGHT,:],small_probs_fg_bigger_bg_mask[:constants.FACE_HIGHT,:] )
+        small_or_mask[constants.FACE_HIGHT:y_mean_shoes,:]=np.maximum(small_face_probs_fg_bigger_bg_mask[constants.FACE_HIGHT:y_mean_shoes,:],
+                                                   small_probs_fg_bigger_bg_mask[constants.FACE_HIGHT:y_mean_shoes,:] )
         #small_or_mask[:y_mean_shoes,:]= small_probs_fg_bigger_bg_mask[:y_mean_shoes]
         small_or_mask[y_mean_shoes:,:]= np.maximum(small_probs_fg_bigger_bg_mask[y_mean_shoes:,:],small_shoes_probs_fg_bigger_bg_mask[y_mean_shoes:,:])#small_probs_fg_bigger_bg_mask[:y_mean_shoes]
         y_offset= 30
@@ -217,6 +226,10 @@ def background_subtraction(input_video_path):
         kernel =cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(5,5))
         small_or_mask[y_mean_shoes - y_offset:, :] = cv2.morphologyEx(small_or_mask[y_mean_shoes - y_offset:, :],
                                                                      cv2.MORPH_CLOSE, kernel=np.ones((1,20)))
+        small_or_mask[:y_mean_face + y_offset, :] = cv2.morphologyEx(small_or_mask[:y_mean_face + y_offset, :],
+                                                                     cv2.MORPH_CLOSE, kernel=np.ones((1,20)),iterations=3)
+        small_or_mask[:y_mean_face + y_offset, :] = cv2.morphologyEx(small_or_mask[:y_mean_face + y_offset, :],
+                                                                     cv2.MORPH_CLOSE, kernel=np.ones((20,1)),iterations=3 )
         small_or_mask = cv2.morphologyEx(small_or_mask,cv2.MORPH_CLOSE, kernel=kernel,iterations=2)
         or_mask = np.zeros(person_and_blue_mask.shape)
         or_mask [max(0,y_mean-constants.WINDOW_H//2):min(h,y_mean+constants.WINDOW_H//2),max(0,x_mean- constants.WINDOW_W//2):min(w,x_mean+constants.WINDOW_W//2)]=small_or_mask
