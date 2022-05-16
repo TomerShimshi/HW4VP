@@ -49,7 +49,7 @@ def load_video(cap,wanted_colors = 'bgr'):
             frames.append(frame)
         elif wanted_colors == 'yuv':
             frames.append(cv2.cvtColor(frame, cv2.COLOR_BGR2YUV))
-        elif wanted_colors == 'bw':
+        elif wanted_colors == 'gray':
             frames.append(cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY))
         else:
             frames.append(cv2.cvtColor(frame, cv2.COLOR_BGR2HSV))

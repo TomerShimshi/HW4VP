@@ -13,4 +13,4 @@ ID2 = 320521461
 #video_stabilize.stabalize_video('Inputs\INPUT.avi','Outputs\stabilized_{}_{}.avi'.format(ID1,ID2))
 
 background_subtraction.background_subtraction('Outputs\stabilized_{}_{}.avi'.format(ID1,ID2))
-#trashV2.background_subtraction('Outputs\stabilized_{}_{}.avi'.format(ID1,ID2))
+#trashV2.background_subtraction('Outputs\stabilized_{}_{}.avi'.format(ID1,ID2)) 
