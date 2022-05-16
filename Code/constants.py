@@ -7,7 +7,7 @@ SMOOTH_RADIUS = 10
 
 
 '''  Background Subtraction CONST. '''
-BLUE_MASK_T =150
+BLUE_MASK_T =200
 BW_MEDIUM = 1
 WINDOW_W = 800
 WINDOW_H = 1000

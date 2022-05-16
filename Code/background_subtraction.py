@@ -29,16 +29,19 @@ def background_subtraction(input_video_path):
     #create the backround subtractor
     fgbg = cv2.createBackgroundSubtractorKNN(history=800,detectShadows=False,dist2Threshold =90.0)
     mask_list = np.zeros((n_frames,parameters["height"],parameters['width']))
-    num_iter = 2
+    num_iter = 6
     print('started studing frames history')
     pbar = tqdm.tqdm(total=num_iter*n_frames)
     for i in range(num_iter):
-        for frame_idx, frame in enumerate(frames_gray):
+        for frame_idx, frame in enumerate(frames_gray[:70]):
             #frame_hsv= frame[:,:,1:]
             fg_mask = fgbg.apply(frame)
-            temp = np.max(fg_mask)
-            if frame_idx %50 ==0:
-                t=1
+            #if i == num_iter-1:
+            #    kernel =cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(5,5))
+            #    #fg_mask[constants.SHOES_HIGHT:,:] = cv2.erode(fg_mask,kernel,iterations =1)
+            #    fg_mask[constants.SHOES_HIGHT:,:] = cv2.dilate(fg_mask[constants.SHOES_HIGHT:,:],kernel,iterations =2)
+
+
             fg_mask = (fg_mask>200).astype(np.uint8)
 
             mask_list[frame_idx]= fg_mask
@@ -50,13 +53,13 @@ def background_subtraction(input_video_path):
     
     print('start collect color KDE')
     pbar = tqdm.tqdm(total=n_frames)
-    for frame_idx, frame in enumerate(frames_bgr):
+    for frame_idx, frame in enumerate(frames_bgr[:70]):
         blue_fram,_,_ = cv2.split(frame)
         mask= mask_list[frame_idx]
         temp =np.max(mask)
         kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(6,6)) 
-        mask = cv2.morphologyEx(mask,cv2.MORPH_CLOSE,kernel=kernel,iterations=2).astype(np.uint8)
-        mask = cv2.medianBlur(mask,ksize=7)
+        mask = cv2.morphologyEx(mask,cv2.MORPH_CLOSE,kernel=kernel,iterations=6).astype(np.uint8)
+        mask = cv2.medianBlur(mask,ksize=7) #cv2.bilateralFilter(mask,d=15,sigmaColor=85,sigmaSpace=85) #cv2.medianBlur(mask,ksize=7)
         contours,_ = cv2.findContours(mask,cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
         contours = list(contours)
         person_mask = np.zeros(mask.shape)
@@ -68,7 +71,7 @@ def background_subtraction(input_video_path):
         person_and_blue_mask =(blue_mask*person_mask).astype(np.uint8)
         temp =np.max(person_and_blue_mask)
         fg_indices = utilis.choose_randome_indecis(person_and_blue_mask,22,True)
-        bg_indices = utilis.choose_randome_indecis(person_and_blue_mask,22,False)
+        bg_indices = utilis.choose_randome_indecis(person_and_blue_mask,80,False)
         #$$$$$$$$$$$$ Mybe need to find ccolors for the shoes $$$$$$$$$$$$
         shoes_mask = person_and_blue_mask.copy()
         shoes_mask[:constants.SHOES_HIGHT,:]=0
@@ -100,7 +103,7 @@ def background_subtraction(input_video_path):
     #filtering using the KDE
     print('start the KDE filtering')
     pbar = tqdm.tqdm(total=n_frames)
-    for frame_idx, frame in enumerate(frames_bgr[:]):
+    for frame_idx, frame in enumerate(frames_bgr[:70]):
         person_and_blue_mask = person_and_blue_mask_list[frame_idx]
         person_and_blue_mask_indecis = np.where(person_and_blue_mask ==1)
         y_mean,x_mean = (np.mean(person_and_blue_mask_indecis[0]).astype(int),np.mean(person_and_blue_mask_indecis[1]).astype(int))
@@ -116,7 +119,7 @@ def background_subtraction(input_video_path):
         small_bg_prob_stacked = np.fromiter(map(lambda elem:utilis.check_if_in_dic(bg_pdf_memo,elem,bg_pdf),map(tuple,small_frame_bgr[small_person_and_blue_mask_idx])),
         dtype= float)
         small_probs_fg_bigger_bg_mask= np.zeros(small_person_and_blue_mask.shape)
-        small_probs_fg_bigger_bg_mask[small_person_and_blue_mask_idx]= (small_fg_prob_stacked>small_bg_prob_stacked).astype(np.uint8)
+        small_probs_fg_bigger_bg_mask[small_person_and_blue_mask_idx]= (small_fg_prob_stacked>small_bg_prob_stacked*1.1).astype(np.uint8)
         
         ##$$$$ Now we do the same for the shoes
         #here we try somthinmg new 
@@ -134,19 +137,21 @@ def background_subtraction(input_video_path):
         '''
         small_shoes_frame_bgr = small_frame_bgr[y_mean_shoes:,:]
         small_shoes_mask = person_and_blue_mask[y_mean_shoes:,:]
-        small_shoes_mask_idx = np.where(small_shoes_mask == 1)
+        small_shoes_mask_idx = np.where(small_shoes_mask == 0)
 
-        ###### FELETE THA ABOVE
+        ###### DELETE THE ABOVE
 
         small_white_mask = np.copy(small_probs_fg_bigger_bg_mask)
         small_white_mask[:-270,:]=1
         small_prob_fg_bigger_bg_mask_idx = np.where(small_white_mask==0)
         small_shoes_probs_fg_bigger_bg_mask = np.zeros(small_person_and_blue_mask.shape)
-        small_shoes_fg_prob_stacked = np.fromiter(map(lambda elem:utilis.check_if_in_dic(fg_shoes_pdf_memo,elem,fg_shoes_pdf),map(tuple,small_frame_bgr[small_prob_fg_bigger_bg_mask_idx])),
-        dtype= float)
-        small_shoes_bg_prob_stacked = np.fromiter(map(lambda elem:utilis.check_if_in_dic(bg_shoes_pdf_memo,elem,bg_shoes_pdf),map(tuple,small_frame_bgr[small_prob_fg_bigger_bg_mask_idx])),
-        dtype= float)
-        shoes_fg_beats_shoes_bg_mask= (small_shoes_fg_prob_stacked>small_shoes_bg_prob_stacked).astype(np.uint8)
+        small_shoes_fg_prob_stacked = np.fromiter(map(lambda elem:utilis.check_if_in_dic(fg_shoes_pdf_memo,elem,fg_shoes_pdf)
+            ,map(tuple,small_frame_bgr[small_prob_fg_bigger_bg_mask_idx])),dtype= float)
+        small_shoes_bg_prob_stacked = np.fromiter(map(lambda elem:utilis.check_if_in_dic(bg_shoes_pdf_memo,elem,bg_shoes_pdf)
+            ,map(tuple,small_frame_bgr[small_prob_fg_bigger_bg_mask_idx])), dtype= float)
+        #shoes_fg_beats_shoes_bg_mask= (small_shoes_fg_prob_stacked/(small_shoes_bg_prob_stacked+small_shoes_fg_prob_stacked)).astype(np.uint8)
+        shoes_fg_beats_shoes_bg_mask= (small_shoes_fg_prob_stacked/(small_shoes_bg_prob_stacked+small_shoes_fg_prob_stacked))
+        shoes_fg_beats_shoes_bg_mask=(shoes_fg_beats_shoes_bg_mask>0.55).astype(np.uint8)
         small_shoes_probs_fg_bigger_bg_mask[small_prob_fg_bigger_bg_mask_idx] = shoes_fg_beats_shoes_bg_mask
         shoes_idx = np.where(small_shoes_probs_fg_bigger_bg_mask == 1)
         y_mean_shoes,x_mean_shoes = (np.mean(shoes_idx[0]).astype(int),np.mean(shoes_idx[1]).astype(int))
@@ -168,12 +173,13 @@ def background_subtraction(input_video_path):
         #small_or_mask = small_probs_fg_bigger_bg_mask
         small_or_mask[:y_mean_shoes,:]= small_probs_fg_bigger_bg_mask[:y_mean_shoes]
         small_or_mask[y_mean_shoes:,:]= np.maximum(small_probs_fg_bigger_bg_mask[y_mean_shoes:,:],small_shoes_probs_fg_bigger_bg_mask[y_mean_shoes:,:])#small_probs_fg_bigger_bg_mask[:y_mean_shoes]
-        
-        small_or_mask[y_mean_shoes - 30:, :] = cv2.morphologyEx(small_or_mask[y_mean_shoes - 30:, :],
-                                                                     cv2.MORPH_CLOSE, np.ones((1, 20)))
-        small_or_mask[y_mean_shoes - 30:, :] = cv2.morphologyEx(small_or_mask[y_mean_shoes - 30:, :],
-                                                                     cv2.MORPH_CLOSE, np.ones((1, 20)))
-        
+        y_offset= 30
+        #small_or_mask[y_mean_shoes - y_offset:, :] = cv2.morphologyEx(small_or_mask[y_mean_shoes - y_offset:, :],
+        #                                                             cv2.MORPH_CLOSE, np.ones((1, 20)),iterations=3)
+        kernel =cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(5,5))
+        small_or_mask[y_mean_shoes - y_offset:, :] = cv2.morphologyEx(small_or_mask[y_mean_shoes - y_offset:, :],
+                                                                     cv2.MORPH_CLOSE, kernel=np.ones((1,20)))
+        small_or_mask = cv2.morphologyEx(small_or_mask,cv2.MORPH_CLOSE, kernel=kernel,iterations=2)
         or_mask = np.zeros(person_and_blue_mask.shape)
         or_mask [max(0,y_mean-constants.WINDOW_H//2):min(h,y_mean+constants.WINDOW_H//2),max(0,x_mean- constants.WINDOW_W//2):min(w,x_mean+constants.WINDOW_W//2)]=small_or_mask
         or_mask_list[frame_idx]=or_mask
@@ -184,7 +190,7 @@ def background_subtraction(input_video_path):
     print('final proccseing')
     final_masks_list, final_frames_list = [], []
     pbar = tqdm.tqdm(total=n_frames)
-    for frame_idx, frame in enumerate(frames_bgr):
+    for frame_idx, frame in enumerate(frames_bgr[:70]):
         or_mask = or_mask_list[frame_idx]
         #or_mask =person_and_blue_mask_list[frame_idx] #mask_list[frame_idx]
         final_mask = np.copy(or_mask).astype(np.uint8)
