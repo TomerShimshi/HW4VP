@@ -124,7 +124,7 @@ def background_subtraction(input_video_path):
         small_probs_fg_bigger_bg_mask= np.zeros(small_person_and_blue_mask.shape)
 
         fg_beats_shoes_bg_mask= (small_fg_prob_stacked/(small_bg_prob_stacked+small_fg_prob_stacked))
-        small_probs_fg_bigger_bg_mask[small_person_and_blue_mask_idx]=(fg_beats_shoes_bg_mask>0.6).astype(np.uint8)
+        small_probs_fg_bigger_bg_mask[small_person_and_blue_mask_idx]=(fg_beats_shoes_bg_mask>0.65).astype(np.uint8)
 
         #small_probs_fg_bigger_bg_mask[small_person_and_blue_mask_idx]= (small_fg_prob_stacked>small_bg_prob_stacked*1.1).astype(np.uint8)
         
@@ -183,10 +183,10 @@ def background_subtraction(input_video_path):
         y_offset= 30
         #small_or_mask[y_mean_shoes - y_offset:, :] = cv2.morphologyEx(small_or_mask[y_mean_shoes - y_offset:, :],
         #                                                             cv2.MORPH_CLOSE, np.ones((1, 20)),iterations=3)
-        kernel =cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(8,8))
+        kernel =cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(6,6))
         kernel_close =cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(6,6))
-        small_or_mask[:constants.FACE_HIGHT, :] = cv2.morphologyEx(small_or_mask[:constants.FACE_HIGHT, :],cv2.MORPH_OPEN,kernel=kernel,iterations=3).astype(np.uint8)
-        small_or_mask[:constants.FACE_HIGHT, :] = cv2.morphologyEx(small_or_mask[:constants.FACE_HIGHT, :],cv2.MORPH_CLOSE,kernel=kernel_close,iterations=2)
+        #small_or_mask[:constants.FACE_HIGHT, :] = cv2.morphologyEx(small_or_mask[:constants.FACE_HIGHT, :],cv2.MORPH_OPEN,kernel=kernel,iterations=3).astype(np.uint8)
+        #small_or_mask[:constants.FACE_HIGHT, :] = cv2.morphologyEx(small_or_mask[:constants.FACE_HIGHT, :],cv2.MORPH_CLOSE,kernel=kernel_close,iterations=2)
         small_or_mask[y_mean_shoes - y_offset:, :] = cv2.morphologyEx(small_or_mask[y_mean_shoes - y_offset:, :],
                                                                      cv2.MORPH_CLOSE, kernel=np.ones((1,20)))
         small_or_mask[y_mean_shoes - y_offset:, :] = cv2.morphologyEx(small_or_mask[y_mean_shoes - y_offset:, :],
