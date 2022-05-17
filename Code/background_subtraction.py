@@ -185,8 +185,8 @@ def background_subtraction(input_video_path):
         #                                                             cv2.MORPH_CLOSE, np.ones((1, 20)),iterations=3)
         kernel =cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(6,6))
         kernel_close =cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(6,6))
-        #small_or_mask[:constants.FACE_HIGHT, :] = cv2.morphologyEx(small_or_mask[:constants.FACE_HIGHT, :],cv2.MORPH_OPEN,kernel=kernel,iterations=3).astype(np.uint8)
-        #small_or_mask[:constants.FACE_HIGHT, :] = cv2.morphologyEx(small_or_mask[:constants.FACE_HIGHT, :],cv2.MORPH_CLOSE,kernel=kernel_close,iterations=2)
+        small_or_mask[:constants.FACE_HIGHT, :] = cv2.morphologyEx(small_or_mask[:constants.FACE_HIGHT, :],cv2.MORPH_OPEN,kernel=kernel,iterations=3).astype(np.uint8)
+        small_or_mask[:constants.FACE_HIGHT, :] = cv2.morphologyEx(small_or_mask[:constants.FACE_HIGHT, :],cv2.MORPH_CLOSE,kernel=kernel_close,iterations=2)
         small_or_mask[y_mean_shoes - y_offset:, :] = cv2.morphologyEx(small_or_mask[y_mean_shoes - y_offset:, :],
                                                                      cv2.MORPH_CLOSE, kernel=np.ones((1,20)))
         small_or_mask[y_mean_shoes - y_offset:, :] = cv2.morphologyEx(small_or_mask[y_mean_shoes - y_offset:, :],
