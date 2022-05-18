@@ -133,9 +133,10 @@ def  check_if_in_dic(dic,element,func):
 def scale_fig_0_to_255(input_martix):
     if type(input_martix) == np.bool:
         input_martix =  np.uint8(input_martix)
-    input_martix = input_martix.astype(uint8)
+    #input_martix = input_martix.astype(uint8)
     scaled = 255*(input_martix-np.min(input_martix))/np.ptp(input_martix)
     return np.uint8(scaled)
+
 
 def use_mask_on_frame(frame,mask):
     masked_frame = np.copy(frame)
@@ -143,6 +144,15 @@ def use_mask_on_frame(frame,mask):
     masked_frame[:,:,1]= masked_frame[:,:,1]*mask
     masked_frame[:,:,2]= masked_frame[:,:,2]*mask
     return masked_frame
+
+def convert_mak_to_image(mask):
+    if type(mask) == np.bool:
+        mask =  np.uint8(mask)
+    #mask= mask.astype(uint8)
+    scaled_mask = 255*(mask-np.min(mask)/np.ptp(mask))
+    return np.uint8(scaled_mask)
+
+
 
 
 

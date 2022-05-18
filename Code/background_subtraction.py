@@ -1,6 +1,7 @@
    
 from audioop import reverse
 import logging
+from pickle import TRUE
 from tkinter import X
 import cv2
 import numpy as np
@@ -218,8 +219,8 @@ def background_subtraction(input_video_path):
             pass
         final_mask = (final_contour_mask * final_mask).astype(np.uint8)
         #final_mask [final_contour_mask == 0] = 0#(final_contour_mask * final_mask).astype(np.uint8)
-        temp_2 = np.max(final_mask)
-        final_masks_list.append(final_mask)
+        temp_2 = utilis.scale_fig_0_to_255(final_mask)
+        final_masks_list.append(utilis.scale_fig_0_to_255(final_mask))
         temp =np.max( utilis.use_mask_on_frame(frame=frame,mask=final_mask))
         final_frames_list.append(utilis.use_mask_on_frame(frame=frame,mask=final_mask))
         pbar.update(1)
@@ -229,6 +230,7 @@ def background_subtraction(input_video_path):
         
 
     utilis.write_video('Outputs\extracted_{}_{}.avi'.format(ID1,ID2),parameters=parameters,frames=final_frames_list,isColor=True)
+    utilis.write_video('Outputs\_binary_{}_{}.avi'.format(ID1,ID2),parameters=parameters,frames=final_masks_list,isColor=False)
 
 
 
