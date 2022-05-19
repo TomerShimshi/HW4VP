@@ -1,8 +1,6 @@
    
-from audioop import reverse
+
 import logging
-from pickle import TRUE
-from tkinter import X
 import cv2
 import numpy as np
 import tqdm
@@ -25,7 +23,7 @@ def background_subtraction(input_video_path):
     h,w = parameters["height"],parameters['width']
     #load the frames
     frames_bgr =  utilis.load_video(cap,wanted_colors='bgr')
-    frames_gray = utilis.load_video(cap,wanted_colors='gray')
+    frames_gray = utilis.color_to_gray(frames_bgr)
     
     n_frames = len(frames_bgr)
     #create the backround subtractor

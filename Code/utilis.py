@@ -153,6 +153,27 @@ def convert_mak_to_image(mask):
     return np.uint8(scaled_mask)
 
 
+    ### taken from https://stackoverflow.com/questions/57294609/how-to-generate-a-trimap-image
+
+def generate_trimap(mask,eroision_iter=6,dilate_iter=8):
+    
+    #mask[mask==1] = 255
+    d_kernel = np.ones((3,3))
+    erode  = cv2.erode(mask,d_kernel,iterations=eroision_iter)
+    dilate = cv2.dilate(mask,d_kernel,iterations=dilate_iter)
+    unknown1 = cv2.bitwise_xor(erode,mask)
+    unknown2 = cv2.bitwise_xor(dilate,mask)
+    unknowns = cv2.add(unknown1,unknown2)
+    unknowns[unknowns==255]=127
+    trimap = cv2.add(mask,unknowns)
+    # cv2.imwrite("mask.png",mask)
+    # cv2.imwrite("dilate.png",dilate)
+    # cv2.imwrite("tri.png",trimap)
+    labels = trimap.copy()
+    labels[trimap==127]=1 #unknown
+    labels[trimap==255]=2 #foreground
+    #cv2.imwrite(mask_path,labels)
+    return labels
 
 
 
