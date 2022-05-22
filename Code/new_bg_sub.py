@@ -28,7 +28,7 @@ def background_subtraction(input_video_path):
     n_frames = len(frames_bgr)
     #create the backround subtractor
     num_iter = 8
-    fgbg = cv2.createBackgroundSubtractorKNN(history=num_iter*n_frames,detectShadows=False,dist2Threshold =70.0)
+    fgbg = cv2.createBackgroundSubtractorKNN(history=num_iter*n_frames,detectShadows=False,dist2Threshold =170.0)
     mask_list = np.zeros((n_frames,parameters["height"],parameters['width']))
    
     print('started studing frames history')
@@ -58,8 +58,8 @@ def background_subtraction(input_video_path):
         blue_fram,_,_ = cv2.split(frame)
         mask= mask_list[frame_idx].astype(np.uint8)
         temp =np.max(mask)
-        mask = cv2.medianBlur(mask,ksize=5)
-        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(5,5)) 
+        mask = cv2.medianBlur(mask,ksize=7)
+        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(4,4)) 
         mask = cv2.morphologyEx(mask,cv2.MORPH_OPEN,kernel=kernel,iterations=1).astype(np.uint8)
         mask = cv2.morphologyEx(mask,cv2.MORPH_CLOSE,kernel=kernel,iterations=2).astype(np.uint8)
         #mask = cv2.bilateralFilter(mask,d=15,sigmaColor=85,sigmaSpace=85) #cv2.bilateralFilter(mask,d=15,sigmaColor=85,sigmaSpace=85) #cv2.medianBlur(mask,ksize=7)
@@ -75,11 +75,13 @@ def background_subtraction(input_video_path):
         temp =np.max(blue_mask)
         person_and_blue_mask =(blue_mask*person_mask).astype(np.uint8)
         temp =np.max(person_and_blue_mask)
-        fg_indices = utilis.choose_randome_indecis(person_and_blue_mask,282,True)
-        bg_indices = utilis.choose_randome_indecis(person_and_blue_mask,282,False)
+        upper_mask= person_and_blue_mask.copy()
+        upper_mask[h//2:,:]=0
+        fg_indices = utilis.choose_randome_indecis(upper_mask,182,True)
+        bg_indices = utilis.choose_randome_indecis(upper_mask,182,False)
         #$$$$$$$$$$$$ Mybe need to find ccolors for the shoes $$$$$$$$$$$$
         shoes_mask = person_and_blue_mask.copy()
-        shoes_mask[:constants.SHOES_HIGHT,:]=0
+        shoes_mask[:h//2,:]=0
         fg_shoes_indices = utilis.choose_randome_indecis(shoes_mask,82,True)
         bg_shoes_indices = utilis.choose_randome_indecis(shoes_mask,82,False)
         person_and_blue_mask_list[frame_idx] = person_and_blue_mask
@@ -111,23 +113,44 @@ def background_subtraction(input_video_path):
     for frame_idx, frame in enumerate(frames_bgr[:]):
         person_and_blue_mask = person_and_blue_mask_list[frame_idx]
         person_and_blue_mask_indecis = np.where(person_and_blue_mask ==1)
+        #### NOW we split from upper and lower
+        
         y_mean,x_mean = (np.mean(person_and_blue_mask_indecis[0]).astype(int),np.mean(person_and_blue_mask_indecis[1]).astype(int))
         small_frame_bgr = frame[max(0, y_mean - constants.WINDOW_H // 2):min(h, y_mean + constants.WINDOW_H // 2),
                           max(0, x_mean - constants.WINDOW_W // 2):min(w, x_mean + constants.WINDOW_W // 2),  :]
-        small_person_and_blue_mask = person_and_blue_mask[
+        small_person_and_blue_mask= person_and_blue_mask[
                                      max(0, y_mean - constants.WINDOW_H  // 2):min(h, y_mean + constants.WINDOW_H // 2),
                                      max(0, x_mean - constants.WINDOW_W // 2):min(w, x_mean + constants.WINDOW_W // 2)]
-        small_person_and_blue_mask_idx = np.where(small_person_and_blue_mask == 1)
-        small_prop_fg_bigger_bg_mask = np.zeros(small_person_and_blue_mask.shape)
-        small_fg_prob_stacked = np.fromiter(map(lambda elem:utilis.check_if_in_dic(fg_pdf_memo,elem,fg_pdf),map(tuple,small_frame_bgr[small_person_and_blue_mask_idx])),
+        upper_mask= small_person_and_blue_mask.copy()
+        upper_mask[h//2:,:]=0
+        small_person_and_blue_mask_upper_idx = np.where(upper_mask == 1)
+        
+        small_fg_prob_stacked_upper = np.fromiter(map(lambda elem:utilis.check_if_in_dic(fg_pdf_memo,elem,fg_pdf),map(tuple,small_frame_bgr[small_person_and_blue_mask_upper_idx])),
         dtype= float)
-        small_bg_prob_stacked = np.fromiter(map(lambda elem:utilis.check_if_in_dic(bg_pdf_memo,elem,bg_pdf),map(tuple,small_frame_bgr[small_person_and_blue_mask_idx])),
+        small_bg_prob_stacked_upper = np.fromiter(map(lambda elem:utilis.check_if_in_dic(bg_pdf_memo,elem,bg_pdf),map(tuple,small_frame_bgr[small_person_and_blue_mask_upper_idx])),
         dtype= float)
-        small_probs_fg_bigger_bg_mask= np.zeros(small_person_and_blue_mask.shape)
+        small_probs_fg_bigger_bg_mask_upper= np.zeros(small_person_and_blue_mask.shape)
 
-        fg_beats_bg_mask= (small_fg_prob_stacked/(small_bg_prob_stacked+small_fg_prob_stacked))
-        small_probs_fg_bigger_bg_mask[small_person_and_blue_mask_idx]=(fg_beats_bg_mask>0.75).astype(np.uint8)
+        small_fg_bigger_bg_mask_upper= (small_fg_prob_stacked_upper/(small_bg_prob_stacked_upper+small_fg_prob_stacked_upper))
+        small_probs_fg_bigger_bg_mask_upper[small_person_and_blue_mask_upper_idx]=(small_fg_bigger_bg_mask_upper>0.65).astype(np.uint8)
 
+
+        #### from here its the lower
+
+        lower_mask= small_person_and_blue_mask.copy()
+        lower_mask[:h//2,:]=0
+        small_person_and_blue_mask_upper_idx = np.where(lower_mask == 1)
+        
+        small_fg_prob_stacked_lower = np.fromiter(map(lambda elem:utilis.check_if_in_dic(fg_shoes_pdf_memo,elem,fg_shoes_pdf),map(tuple,small_frame_bgr[small_person_and_blue_mask_upper_idx])),
+        dtype= float)
+        small_bg_prob_stacked_lower = np.fromiter(map(lambda elem:utilis.check_if_in_dic(bg_shoes_pdf_memo,elem,bg_shoes_pdf),map(tuple,small_frame_bgr[small_person_and_blue_mask_upper_idx])),
+        dtype= float)
+        small_probs_fg_bigger_bg_mask_lower= np.zeros(small_person_and_blue_mask.shape)
+
+        small_probs_fg_bigger_bg_lower= (small_fg_prob_stacked_lower/(small_bg_prob_stacked_lower+small_fg_prob_stacked_lower))
+        small_probs_fg_bigger_bg_mask_lower[small_person_and_blue_mask_upper_idx]=(small_probs_fg_bigger_bg_lower>0.55).astype(np.uint8)
+
+        small_probs_fg_bigger_bg_mask = small_probs_fg_bigger_bg_mask_lower+small_probs_fg_bigger_bg_mask_upper
         #small_probs_fg_bigger_bg_mask[small_person_and_blue_mask_idx]= (small_fg_prob_stacked>small_bg_prob_stacked*1.1).astype(np.uint8)
         
         ##$$$$ Now we do the same for the shoes
@@ -160,7 +183,7 @@ def background_subtraction(input_video_path):
             ,map(tuple,small_frame_bgr[small_prob_fg_bigger_bg_mask_idx])), dtype= float)
         #shoes_fg_beats_shoes_bg_mask= (small_shoes_fg_prob_stacked/(small_shoes_bg_prob_stacked+small_shoes_fg_prob_stacked)).astype(np.uint8)
         shoes_fg_beats_shoes_bg_mask= (small_shoes_fg_prob_stacked/(small_shoes_bg_prob_stacked+small_shoes_fg_prob_stacked))
-        shoes_fg_beats_shoes_bg_mask=(shoes_fg_beats_shoes_bg_mask>0.55).astype(np.uint8)
+        shoes_fg_beats_shoes_bg_mask=(shoes_fg_beats_shoes_bg_mask>0.65).astype(np.uint8)
         small_shoes_probs_fg_bigger_bg_mask[small_prob_fg_bigger_bg_mask_idx] = shoes_fg_beats_shoes_bg_mask
         shoes_idx = np.where(small_shoes_probs_fg_bigger_bg_mask == 1)
         y_mean_shoes,x_mean_shoes = (np.mean(shoes_idx[0]).astype(int),np.mean(shoes_idx[1]).astype(int))
@@ -174,14 +197,14 @@ def background_subtraction(input_video_path):
         y_offset= 30
         #small_or_mask[y_mean_shoes - y_offset:, :] = cv2.morphologyEx(small_or_mask[y_mean_shoes - y_offset:, :],
         #                                                             cv2.MORPH_CLOSE, np.ones((1, 20)),iterations=3)
-        kernel =cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(11,11))
+        kernel =cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(8,8))
         kernel_close =cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(6,6))
-        #small_or_mask[:constants.FACE_HIGHT, :] = cv2.morphologyEx(small_or_mask[:constants.FACE_HIGHT, :],cv2.MORPH_OPEN,kernel=kernel,iterations=1).astype(np.uint8)
-        #small_or_mask[:constants.FACE_HIGHT, :] = cv2.morphologyEx(small_or_mask[:constants.FACE_HIGHT, :],cv2.MORPH_CLOSE,kernel=kernel_close,iterations=1)
+        small_or_mask[:constants.FACE_HIGHT, :] = cv2.morphologyEx(small_or_mask[:constants.FACE_HIGHT, :],cv2.MORPH_OPEN,kernel=kernel,iterations=1).astype(np.uint8)
+        small_or_mask[:constants.FACE_HIGHT, :] = cv2.morphologyEx(small_or_mask[:constants.FACE_HIGHT, :],cv2.MORPH_CLOSE,kernel=kernel_close,iterations=2)
         small_or_mask[y_mean_shoes - y_offset:, :] = cv2.morphologyEx(small_or_mask[y_mean_shoes - y_offset:, :],
-                                                                     cv2.MORPH_CLOSE, kernel=np.ones((1,20)),iterations=2)
+                                                                     cv2.MORPH_CLOSE, kernel=np.ones((1,20)))
         small_or_mask[y_mean_shoes - y_offset:, :] = cv2.morphologyEx(small_or_mask[y_mean_shoes - y_offset:, :],
-                                                                     cv2.MORPH_CLOSE, kernel=np.ones((20,1)),iterations=2)
+                                                                     cv2.MORPH_CLOSE, kernel=np.ones((20,1)))
         small_or_mask = cv2.morphologyEx(small_or_mask,cv2.MORPH_CLOSE, kernel=kernel_close,iterations=1)
         or_mask = np.zeros(person_and_blue_mask.shape)
         or_mask [max(0,y_mean-constants.WINDOW_H//2):min(h,y_mean+constants.WINDOW_H//2),max(0,x_mean- constants.WINDOW_W//2):min(w,x_mean+constants.WINDOW_W//2)]=small_or_mask

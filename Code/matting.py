@@ -85,10 +85,12 @@ def matting (input_video_path, BW_mask_path,bg_path):
         small_trimap_dist_map = (np.abs(small_bg_dist_map-small_fg_dist_map<constants.EPSILON_SMALL_BAND))
         small_trimap_dist_map_idx = np.where(small_trimap_dist_map==1)
 
+        small_accepted_fg_mask = (small_fg_dist_map<small_bg_dist_map-constants.EPSILON_SMALL_BAND).astype(np.uint8)
+        small_accepted_bg_mask = (small_bg_dist_map>=small_fg_dist_map-constants.EPSILON_SMALL_BAND).astype(np.uint8)
         #NOW WE WANT TO BUILD THE KDE FOR THE BG AND FG TO CALC THE PRIOR FOR ALPHA
 
-        fg_idx = utilis.choose_randome_indecis(small_fg_dist_map,250)
-        bg_idx = utilis.choose_randome_indecis(small_bg_dist_map,250)
+        fg_idx = utilis.choose_randome_indecis(small_accepted_fg_mask,250)
+        bg_idx = utilis.choose_randome_indecis(small_accepted_bg_mask,250)
         fg_pdf = utilis.matting_estimate_pdf(dataset_valus=small_bgr_frame,bw_method=1,idx= fg_idx )
         bg_pdf = utilis.matting_estimate_pdf(dataset_valus=small_bgr_frame,bw_method=1,idx= bg_idx )
 
@@ -96,11 +98,12 @@ def matting (input_video_path, BW_mask_path,bg_path):
         small_bg_probs = bg_pdf(small_bgr_frame[small_trimap_dist_map_idx])
 
         #NOW we want to find Alpha
-        w_fg = np.power(small_fg_dist_map[small_trimap_dist_map_idx],-2)*small_fg_probs
-        w_bg = np.power(small_bg_dist_map[small_trimap_dist_map_idx],-2)*small_bg_probs
+        w_fg = np.power(small_fg_dist_map[small_trimap_dist_map_idx],-constants.R_FG)*small_fg_probs
+        w_bg = np.power(small_bg_dist_map[small_trimap_dist_map_idx],-constants.R_BG)*small_bg_probs
         alpha = w_fg/(w_fg+w_bg)
         small_alpha = np.copy(small_fg_mask).astype(np.float)
         small_alpha[small_trimap_dist_map_idx]= alpha
+
         
         #now we implement the alpha 
         small_mated_frame = small_bgr_frame*small_alpha[:, :, np.newaxis]+small_new_bg*(1-small_alpha[:, :, np.newaxis])  #cv2.addWeighted(small_bgr_frame,small_alpha,small_new_bg,1-small_alpha,gamma=0)
@@ -109,7 +112,12 @@ def matting (input_video_path, BW_mask_path,bg_path):
 
         matted_frame = np.copy(new_bg)
         matted_frame[mask_top_idx:mask_bottom_idx,mask_left_idx:mask_right_idx] = small_mated_frame
-        matted_frames_list.append(matted_frame)     
+        matted_frames_list.append(matted_frame)  
+
+        alpha_frame = np.zeros(frames_mask[frame_idx].shape) 
+        alpha_frame[mask_top_idx:mask_bottom_idx,mask_left_idx:mask_right_idx] = small_alpha
+        alpha_frame= (alpha_frame*255).astype(np.uint8)
+        alpha_frame_list.append(matted_frame)   
 
        
 
@@ -125,4 +133,5 @@ def matting (input_video_path, BW_mask_path,bg_path):
         
     
     utilis.write_video('Outputs\matt_{}_{}.avi'.format(ID1,ID2),parameters=parameters,frames=matted_frames_list,isColor=True)
+    utilis.write_video('Outputs\_alpha_{}_{}.avi'.format(ID1,ID2),parameters=parameters,frames=alpha_frame_list,isColor=False)
 
