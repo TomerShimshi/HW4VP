@@ -49,6 +49,7 @@ def background_subtraction(input_video_path):
             pbar.update(1)
     print('finished studying video history')
     fg_colors, bg_colors = None,None
+    middle_fg_colors, middle_bg_colors = None,None
     fg_shoes_colors,bg_shoes_colors = None,None
     person_and_blue_mask_list = np.zeros((n_frames,parameters["height"],parameters['width']))
     
@@ -70,18 +71,29 @@ def background_subtraction(input_video_path):
         person_mask = np.zeros(mask.shape)
         cv2.drawContours(person_mask, [max(contours, key = cv2.contourArea)], -1, color=(1, 1, 1), thickness=cv2.FILLED)
         temp =np.max(person_mask)
-        #person_mask = 
+        
         blue_mask = (blue_fram<constants.BLUE_MASK_T).astype(np.uint8)
         temp =np.max(blue_mask)
         person_and_blue_mask =(blue_mask*person_mask).astype(np.uint8)
         temp =np.max(person_and_blue_mask)
+        #$$$%% now we split the masks for upper middle and lower
+
+        #$$$$$%% UPPER PART
         upper_mask= person_and_blue_mask.copy()
-        upper_mask[h//2:,:]=0
+        upper_mask[h//3:,:]=0
         fg_indices = utilis.choose_randome_indecis(upper_mask,182,True)
         bg_indices = utilis.choose_randome_indecis(upper_mask,182,False)
-        #$$$$$$$$$$$$ Mybe need to find ccolors for the shoes $$$$$$$$$$$$
+
+        ###@@###$%%%%% Middle part
+        middle_mask= person_and_blue_mask.copy()
+        middle_mask[:h//3,:]=0
+        middle_mask[2*(h//3):,:]=0
+        fg_indices_middle = utilis.choose_randome_indecis(middle_mask,182,True)
+        bg_indices_middle = utilis.choose_randome_indecis(middle_mask,182,False)
+
+        #$$$$$$$$$$$$ now the last 3rd $$$$$$$$$$$$
         shoes_mask = person_and_blue_mask.copy()
-        shoes_mask[:h//2,:]=0
+        shoes_mask[:2*(h//3),:]=0
         fg_shoes_indices = utilis.choose_randome_indecis(shoes_mask,82,True)
         bg_shoes_indices = utilis.choose_randome_indecis(shoes_mask,82,False)
         person_and_blue_mask_list[frame_idx] = person_and_blue_mask
@@ -89,20 +101,27 @@ def background_subtraction(input_video_path):
         if fg_colors is None:
             fg_colors = frame[fg_indices[:,0],fg_indices[:,1]]
             bg_colors = frame[bg_indices[:,0],bg_indices[:,1]]
+            middle_fg_colors = frame[fg_indices_middle[:,0],fg_indices_middle[:,1]]
+            middle_bg_colors = frame[bg_indices_middle[:,0],bg_indices_middle[:,1]]
             fg_shoes_colors = frame[fg_shoes_indices[:,0],fg_shoes_indices[:,1]]
             bg_shoes_colors = frame[bg_shoes_indices[:,0],bg_shoes_indices[:,1]]
         
         else:
             fg_colors = np.concatenate((fg_colors, frame[fg_indices[:,0], fg_indices[:,1]]))
             bg_colors =np.concatenate((bg_colors, frame[bg_indices[:,0],bg_indices[:,1]] ))
+            middle_fg_colors = np.concatenate((middle_fg_colors, frame[fg_indices_middle[:,0], fg_indices_middle[:,1]]))
+            middle_bg_colors =np.concatenate((middle_bg_colors, frame[bg_indices_middle[:,0],bg_indices_middle[:,1]] ))
             fg_shoes_colors = np.concatenate((fg_shoes_colors, frame[fg_shoes_indices[:,0], fg_shoes_indices[:,1]]))
             bg_shoes_colors =np.concatenate((bg_shoes_colors, frame[bg_shoes_indices[:,0],bg_shoes_indices[:,1]] ))
         pbar.update(1)
     fg_pdf = utilis.estimate_pdf(dataset_valus= fg_colors,bw_method=constants.BW_MEDIUM)
     bg_pdf = utilis.estimate_pdf(dataset_valus= bg_colors,bw_method=constants.BW_MEDIUM)
+    fg_middle_pdf = utilis.estimate_pdf(dataset_valus= fg_colors,bw_method=constants.BW_MEDIUM)
+    bg_pdf = utilis.estimate_pdf(dataset_valus= bg_colors,bw_method=constants.BW_MEDIUM)
     fg_shoes_pdf = utilis.estimate_pdf(dataset_valus= fg_shoes_colors,bw_method=constants.BW_MEDIUM)
     bg_shoes_pdf = utilis.estimate_pdf(dataset_valus= bg_shoes_colors,bw_method=constants.BW_MEDIUM)
     fg_pdf_memo, bg_pdf_memo= dict(),dict()
+    fg_middle_pdf_memo, bg_middle_pdf_memo= dict(),dict()
     fg_shoes_pdf_memo, bg_shoes_pdf_memo= dict(),dict()
 
     or_mask_list = np.zeros((n_frames,parameters["height"],parameters['width']))
@@ -113,7 +132,7 @@ def background_subtraction(input_video_path):
     for frame_idx, frame in enumerate(frames_bgr[:]):
         person_and_blue_mask = person_and_blue_mask_list[frame_idx]
         person_and_blue_mask_indecis = np.where(person_and_blue_mask ==1)
-        #### NOW we split from upper and lower
+        #### NOW we split from upper lower and middle
         
         y_mean,x_mean = (np.mean(person_and_blue_mask_indecis[0]).astype(int),np.mean(person_and_blue_mask_indecis[1]).astype(int))
         small_frame_bgr = frame[max(0, y_mean - constants.WINDOW_H // 2):min(h, y_mean + constants.WINDOW_H // 2),
@@ -122,7 +141,7 @@ def background_subtraction(input_video_path):
                                      max(0, y_mean - constants.WINDOW_H  // 2):min(h, y_mean + constants.WINDOW_H // 2),
                                      max(0, x_mean - constants.WINDOW_W // 2):min(w, x_mean + constants.WINDOW_W // 2)]
         upper_mask= small_person_and_blue_mask.copy()
-        upper_mask[h//2:,:]=0
+        upper_mask[h//3:,:]=0
         small_person_and_blue_mask_upper_idx = np.where(upper_mask == 1)
         
         small_fg_prob_stacked_upper = np.fromiter(map(lambda elem:utilis.check_if_in_dic(fg_pdf_memo,elem,fg_pdf),map(tuple,small_frame_bgr[small_person_and_blue_mask_upper_idx])),
@@ -134,11 +153,25 @@ def background_subtraction(input_video_path):
         small_fg_bigger_bg_mask_upper= (small_fg_prob_stacked_upper/(small_bg_prob_stacked_upper+small_fg_prob_stacked_upper))
         small_probs_fg_bigger_bg_mask_upper[small_person_and_blue_mask_upper_idx]=(small_fg_bigger_bg_mask_upper>0.65).astype(np.uint8)
 
+        #### now for the middle
+        middle_mask= small_person_and_blue_mask.copy()
+        middle_mask[:h//3,:]=0
+        middle_mask[2*(h//3):,:]=0
+        small_person_and_blue_mask_upper_idx = np.where(middle_mask == 1)
+        
+        small_fg_prob_stacked_middle = np.fromiter(map(lambda elem:utilis.check_if_in_dic(fg_middle_pdf_memo,elem,fg_middle_pdf_memo),map(tuple,small_frame_bgr[small_person_and_blue_mask_upper_idx])),
+        dtype= float)
+        small_bg_prob_stacked_middle = np.fromiter(map(lambda elem:utilis.check_if_in_dic(bg_middle_pdf_memo,elem,bg_middle_pdf_memo),map(tuple,small_frame_bgr[small_person_and_blue_mask_upper_idx])),
+        dtype= float)
+        small_probs_fg_bigger_bg_mask_middle= np.zeros(small_person_and_blue_mask.shape)
+
+        small_probs_fg_bigger_bg_middle= (small_fg_prob_stacked_middle/(small_fg_prob_stacked_middle+small_bg_prob_stacked_middle))
+        small_probs_fg_bigger_bg_mask_middle=[small_person_and_blue_mask_upper_idx]=(small_probs_fg_bigger_bg_middle>0.55).astype(np.uint8)
 
         #### from here its the lower
 
         lower_mask= small_person_and_blue_mask.copy()
-        lower_mask[:h//2,:]=0
+        lower_mask[:2*(h//3),:]=0
         small_person_and_blue_mask_upper_idx = np.where(lower_mask == 1)
         
         small_fg_prob_stacked_lower = np.fromiter(map(lambda elem:utilis.check_if_in_dic(fg_shoes_pdf_memo,elem,fg_shoes_pdf),map(tuple,small_frame_bgr[small_person_and_blue_mask_upper_idx])),
@@ -150,7 +183,7 @@ def background_subtraction(input_video_path):
         small_probs_fg_bigger_bg_lower= (small_fg_prob_stacked_lower/(small_bg_prob_stacked_lower+small_fg_prob_stacked_lower))
         small_probs_fg_bigger_bg_mask_lower[small_person_and_blue_mask_upper_idx]=(small_probs_fg_bigger_bg_lower>0.55).astype(np.uint8)
 
-        small_probs_fg_bigger_bg_mask = small_probs_fg_bigger_bg_mask_lower+small_probs_fg_bigger_bg_mask_upper
+        small_probs_fg_bigger_bg_mask = small_probs_fg_bigger_bg_mask_lower+small_probs_fg_bigger_bg_mask_upper+small_probs_fg_bigger_bg_mask_middle
         #small_probs_fg_bigger_bg_mask[small_person_and_blue_mask_idx]= (small_fg_prob_stacked>small_bg_prob_stacked*1.1).astype(np.uint8)
         
         ##$$$$ Now we do the same for the shoes
