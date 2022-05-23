@@ -81,15 +81,16 @@ def background_subtraction(input_video_path):
 
         #$$$$$%% UPPER PART
         upper_mask= person_and_blue_mask.copy()
+        upper_mask = cv2.morphologyEx(upper_mask,cv2.MORPH_OPEN,kernel=kernel,iterations=1).astype(np.uint8)
         '''
         we give a diffrent number than zero in order to
         niglact this pixwls while calculating the KDE
         '''
-    
+
         upper_mask[h//2:,:]=2
         temp =np.max(upper_mask)
-        fg_indices = utilis.choose_randome_indecis(upper_mask,42,True)
-        bg_indices = utilis.choose_randome_indecis(upper_mask,42,False)
+        fg_indices = utilis.choose_randome_indecis(upper_mask,22,True)
+        bg_indices = utilis.choose_randome_indecis(upper_mask,22,False)
 
         ###@@###$%%%%% Middle part
         middle_mask= person_and_blue_mask.copy()
@@ -158,7 +159,7 @@ def background_subtraction(input_video_path):
         small_probs_fg_bigger_bg_mask_upper= np.zeros(small_person_and_blue_mask.shape)
 
         small_fg_bigger_bg_mask_upper= (small_fg_prob_stacked_upper/(small_bg_prob_stacked_upper+small_fg_prob_stacked_upper))
-        small_probs_fg_bigger_bg_mask_upper[small_person_and_blue_mask_upper_idx]=(small_fg_bigger_bg_mask_upper>0.8).astype(np.uint8)
+        small_probs_fg_bigger_bg_mask_upper[small_person_and_blue_mask_upper_idx]=(small_fg_bigger_bg_mask_upper>0.65).astype(np.uint8)
 
         #### now for the middle
         middle_mask= small_person_and_blue_mask.copy()
@@ -188,7 +189,7 @@ def background_subtraction(input_video_path):
         small_probs_fg_bigger_bg_mask_lower= np.zeros(small_person_and_blue_mask.shape)
 
         small_probs_fg_bigger_bg_lower= (small_fg_prob_stacked_lower/(small_bg_prob_stacked_lower+small_fg_prob_stacked_lower))
-        small_probs_fg_bigger_bg_mask_lower[small_person_and_blue_mask_upper_idx]=(small_probs_fg_bigger_bg_lower>0.55).astype(np.uint8)
+        small_probs_fg_bigger_bg_mask_lower[small_person_and_blue_mask_upper_idx]=(small_probs_fg_bigger_bg_lower>0.65).astype(np.uint8)
 
         small_probs_fg_bigger_bg_mask = small_probs_fg_bigger_bg_mask_lower+small_probs_fg_bigger_bg_mask_upper+small_probs_fg_bigger_bg_mask_middle
         #small_probs_fg_bigger_bg_mask[small_person_and_blue_mask_idx]= (small_fg_prob_stacked>small_bg_prob_stacked*1.1).astype(np.uint8)
@@ -234,9 +235,10 @@ def background_subtraction(input_video_path):
         #small_or_mask[y_mean_shoes - y_offset:, :] = cv2.morphologyEx(small_or_mask[y_mean_shoes - y_offset:, :],
         #                                                             cv2.MORPH_CLOSE, np.ones((1, 20)),iterations=3)
         kernel =cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(8,8))
-        kernel_close =cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(6,6))
+        kernel_close =cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(3,3))
         small_or_mask[:constants.FACE_HIGHT, :] = cv2.morphologyEx(small_or_mask[:constants.FACE_HIGHT, :],cv2.MORPH_OPEN,kernel=kernel,iterations=1).astype(np.uint8)
-        small_or_mask[:constants.FACE_HIGHT, :] = cv2.morphologyEx(small_or_mask[:constants.FACE_HIGHT, :],cv2.MORPH_CLOSE,kernel=kernel_close,iterations=2)
+        small_or_mask[:constants.FACE_HIGHT, :] = cv2.morphologyEx(small_or_mask[:constants.FACE_HIGHT, :],cv2.MORPH_CLOSE,kernel=np.ones((1,20)),iterations=1)
+        small_or_mask[:constants.FACE_HIGHT, :] = cv2.morphologyEx(small_or_mask[:constants.FACE_HIGHT, :],cv2.MORPH_CLOSE,kernel=np.ones((20,1)),iterations=1)
         if y_mean_shoes>0:
             small_or_mask[y_mean_shoes - y_offset:, :] = cv2.morphologyEx(small_or_mask[y_mean_shoes - y_offset:, :],
                                                                          cv2.MORPH_CLOSE, kernel=np.ones((1,20)))
