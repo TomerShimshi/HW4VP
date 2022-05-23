@@ -7,6 +7,7 @@ import video_stabilize
 import background_subtraction
 import matting
 import new_bg_sub
+import test
 
 ID1 = 203200480
 ID2 = 320521461
