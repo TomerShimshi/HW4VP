@@ -33,7 +33,7 @@ def matting (input_video_path, BW_mask_path,bg_path):
     
     print('start mattin creation')
     pbar = tqdm.tqdm(total=n_frames)
-    for frame_idx, frame in enumerate(frames_bgr[:]):
+    for frame_idx, frame in enumerate(frames_bgr):
         luma_frame,_,_ = cv2.split(frames_yuv[frame_idx])
         mask = frames_mask[frame_idx]
         mask = (mask>150).astype(np.uint8)
@@ -57,14 +57,34 @@ def matting (input_video_path, BW_mask_path,bg_path):
         mask_top_idx = max(0,mask_top_idx+OFFSET)
 
         #resize the image to look just at a small window aroud the person
-
+        mask_idx = np.where(mask==1)
+        y_mean,x_mean = (np.mean(mask_idx[0]).astype(int),np.mean(mask_idx[1]).astype(int))
+        '''
         small_luma_frame = luma_frame[mask_top_idx:mask_bottom_idx,mask_left_idx:mask_right_idx]
         small_bgr_frame = frame[mask_top_idx:mask_bottom_idx,mask_left_idx:mask_right_idx]
         small_mask = mask[mask_top_idx:mask_bottom_idx,mask_left_idx:mask_right_idx]
         small_new_bg = new_bg[mask_top_idx:mask_bottom_idx,mask_left_idx:mask_right_idx]
+        '''
+        small_luma_frame = luma_frame[max(0, y_mean - constants.WINDOW_H  // 2):min(h, y_mean + constants.WINDOW_H // 2),
+                                     max(0, x_mean - constants.WINDOW_W // 2):min(w, x_mean + constants.WINDOW_W // 2)]
+        small_bgr_frame = frame[max(0, y_mean - constants.WINDOW_H  // 2):min(h, y_mean + constants.WINDOW_H // 2),
+                                     max(0, x_mean - constants.WINDOW_W // 2):min(w, x_mean + constants.WINDOW_W // 2)]
+        small_mask = mask[max(0, y_mean - constants.WINDOW_H  // 2):min(h, y_mean + constants.WINDOW_H // 2),
+                                     max(0, x_mean - constants.WINDOW_W // 2):min(w, x_mean + constants.WINDOW_W // 2)]
+        small_new_bg = new_bg[max(0, y_mean - constants.WINDOW_H  // 2):min(h, y_mean + constants.WINDOW_H // 2),
+                             max(0, x_mean - constants.WINDOW_W // 2):min(w, x_mean + constants.WINDOW_W // 2)]
 
         #inorder to recive a trimap we calculate the erode image as fg
-        small_fg_mask = cv2.erode(small_mask,kernel=np.ones((7,7)),iterations=constants.ERODE_N_ITER)
+        '''
+        now we try somthing new
+
+        '''
+        small_mask_idx = np.where(small_mask == 1)
+        
+        #small_fg_mask = cv2.erode(small_mask,kernel=np.ones((7,7)),iterations=constants.ERODE_N_ITER)
+        small_fg_mask = small_mask[max(0, y_mean - constants.SMALL_WINDOW_H  // 2):min(h, y_mean + constants.SMALL_WINDOW_H // 2),
+                                     max(0, x_mean - constants.SMALL_WINDOW_W // 2):min(w, x_mean + constants.SMALL_WINDOW_H // 2)] #cv2.erode(small_mask,kernel=np.ones((7,7)),iterations=constants.ERODE_N_ITER)
+        temp = np.where(small_fg_mask ==0)
         #small_fg_mask = fg_mask[mask_top_idx:mask_bottom_idx,mask_left_idx:mask_right_idx]
         #for more documantation GoTo: https://github.com/taigw/GeodisTK/blob/master/demo2d.py
         small_fg_dist_map = GeodisTK.geodesic2d_raster_scan(small_luma_frame,small_fg_mask,1.0,constants.GEO_N_ITER)
@@ -72,15 +92,15 @@ def matting (input_video_path, BW_mask_path,bg_path):
         #inorder to recive a trimap we calculate the dialate image as bg the trimap
         #will be the diff between them
 
-        small_bg_mask = cv2.dilate(small_mask,kernel=np.ones((3,3)),iterations=constants.DIAL_N_ITER)
-        small_bg_mask = 1-small_bg_mask
+        #small_bg_mask = cv2.dilate(small_mask,kernel=np.ones((3,3)),iterations=constants.DIAL_N_ITER)
+        small_bg_mask = 1-small_mask
         #small_bg_mask = bg_mask[mask_top_idx:mask_bottom_idx,mask_left_idx:mask_right_idx]
         #for more documantation GoTo: https://github.com/taigw/GeodisTK/blob/master/demo2d.py
         small_bg_dist_map = GeodisTK.geodesic2d_raster_scan(small_luma_frame,small_bg_mask,1.0,constants.GEO_N_ITER)
 
         #now we build the trimap zone
 
-        small_fg_dist_map = small_fg_dist_map/(small_fg_dist_map+small_bg_dist_map)
+        small_fg_dist_map = small_fg_dist_map/(small_fg_dist_map+small_bg_dist_map+0.0000001)
         small_bg_dist_map = 1-small_fg_dist_map
         small_trimap_dist_map = (np.abs(small_bg_dist_map-small_fg_dist_map<constants.EPSILON_SMALL_BAND))
         small_trimap_dist_map_idx = np.where(small_trimap_dist_map==1)
@@ -107,7 +127,10 @@ def matting (input_video_path, BW_mask_path,bg_path):
         w_fg =small_fg_probs/ (0.001+np.power(small_fg_dist_map[small_trimap_dist_map_idx],constants.R_FG))
         w_bg = small_bg_probs /(0.001+np.power(small_bg_dist_map[small_trimap_dist_map_idx],constants.R_BG))
         alpha = w_fg/(w_fg+w_bg)
-        small_alpha = np.copy(small_fg_mask).astype(np.float)
+        
+        small_fg_mask_test = cv2.erode(small_mask,kernel=np.ones((11,11)),iterations=constants.ERODE_N_ITER)
+        #small_alpha = np.copy(small_fg_mask).astype(np.float)
+        small_alpha = np.copy(small_fg_mask_test).astype(np.float)
         small_alpha[small_trimap_dist_map_idx]= alpha
 
         
@@ -117,11 +140,13 @@ def matting (input_video_path, BW_mask_path,bg_path):
         #resize to original frame size
 
         matted_frame = np.copy(new_bg)
-        matted_frame[mask_top_idx:mask_bottom_idx,mask_left_idx:mask_right_idx] = small_mated_frame
+        matted_frame[max(0, y_mean - constants.WINDOW_H  // 2):min(h, y_mean + constants.WINDOW_H // 2),
+                     max(0, x_mean - constants.WINDOW_W // 2):min(w, x_mean + constants.WINDOW_W // 2)] = small_mated_frame
         matted_frames_list.append(matted_frame)  
 
         alpha_frame = np.zeros(mask.shape) 
-        alpha_frame[mask_top_idx:mask_bottom_idx,mask_left_idx:mask_right_idx] = small_alpha
+        alpha_frame[max(0, y_mean - constants.WINDOW_H  // 2):min(h, y_mean + constants.WINDOW_H // 2),
+                     max(0, x_mean - constants.WINDOW_W // 2):min(w, x_mean + constants.WINDOW_W // 2)]  = small_alpha
         alpha_frame= (alpha_frame*255).astype(np.uint8)
         alpha_frame_list.append(alpha_frame)   
 
