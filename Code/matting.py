@@ -1,4 +1,5 @@
 import logging
+from pickletools import uint8
 import cv2
 import numpy as np
 import tqdm
@@ -80,11 +81,14 @@ def matting (input_video_path, BW_mask_path,bg_path):
 
         '''
         small_mask_idx = np.where(small_mask == 1)
-        
+        shuff = np.ones(mask.shape).astype(np.uint8)
+        small_fg_mask = np.zeros(small_luma_frame.shape).astype(np.uint8)
         #small_fg_mask = cv2.erode(small_mask,kernel=np.ones((7,7)),iterations=constants.ERODE_N_ITER)
-        small_fg_mask = small_mask[max(0, y_mean - constants.SMALL_WINDOW_H  // 2):min(h, y_mean + constants.SMALL_WINDOW_H // 2),
-                                     max(0, x_mean - constants.SMALL_WINDOW_W // 2):min(w, x_mean + constants.SMALL_WINDOW_H // 2)] #cv2.erode(small_mask,kernel=np.ones((7,7)),iterations=constants.ERODE_N_ITER)
-        temp = np.where(small_fg_mask ==0)
+        small_fg_mask [max(0, y_mean - constants.SMALL_WINDOW_H  // 2):min(h, y_mean + constants.SMALL_WINDOW_H // 2),
+                        max(0, x_mean - constants.SMALL_WINDOW_W // 2):min(w, x_mean + constants.SMALL_WINDOW_W // 2) ]= 1 #shuff [max(0, y_mean - constants.SMALL_WINDOW_H  // 2):min(h, y_mean + constants.SMALL_WINDOW_H // 2),
+                                                                                                                            #max(0, x_mean - constants.SMALL_WINDOW_W // 2):min(w, x_mean + constants.SMALL_WINDOW_W // 2) ]
+        #cv2.erode(small_mask,kernel=np.ones((7,7)),iterations=constants.ERODE_N_ITER)
+       
         #small_fg_mask = fg_mask[mask_top_idx:mask_bottom_idx,mask_left_idx:mask_right_idx]
         #for more documantation GoTo: https://github.com/taigw/GeodisTK/blob/master/demo2d.py
         small_fg_dist_map = GeodisTK.geodesic2d_raster_scan(small_luma_frame,small_fg_mask,1.0,constants.GEO_N_ITER)
