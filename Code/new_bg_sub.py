@@ -28,7 +28,7 @@ def background_subtraction(input_video_path):
     
     n_frames = len(frames_bgr)
     #create the backround subtractor
-    num_iter = 8
+    num_iter = 10
     fgbg = cv2.createBackgroundSubtractorKNN(history=num_iter*n_frames,detectShadows=False,dist2Threshold =30)#45)#90.0)
     mask_list = np.zeros((n_frames,parameters["height"],parameters['width']))
    
@@ -89,9 +89,10 @@ def background_subtraction(input_video_path):
         '''
         OFFSET = 30
         upper_mask[h//2:,:]=2
+        
         temp =np.max(upper_mask)
-        fg_indices = utilis.choose_randome_indecis(upper_mask,52,True)
-        bg_indices = utilis.choose_randome_indecis(upper_mask,52,False)
+        fg_indices = utilis.choose_randome_indecis(upper_mask,82,True)
+        bg_indices = utilis.choose_randome_indecis(upper_mask,82,False)
 
         ###@@###$%%%%% Middle part
         middle_mask= person_and_blue_mask.copy()
@@ -151,6 +152,7 @@ def background_subtraction(input_video_path):
                                      max(0, y_mean - constants.WINDOW_H  // 2):min(h, y_mean + constants.WINDOW_H // 2),
                                      max(0, x_mean - constants.WINDOW_W // 2):min(w, x_mean + constants.WINDOW_W // 2)]
         upper_mask= small_person_and_blue_mask.copy()
+        ## NEED TO ADD SMALLER WINDOW
         upper_mask[h//3:,:]=0
         small_person_and_blue_mask_upper_idx = np.where(upper_mask == 1)
         
@@ -161,7 +163,7 @@ def background_subtraction(input_video_path):
         small_probs_fg_bigger_bg_mask_upper= np.zeros(small_person_and_blue_mask.shape)
 
         small_fg_bigger_bg_mask_upper= (small_fg_prob_stacked_upper/(small_bg_prob_stacked_upper+small_fg_prob_stacked_upper))
-        small_probs_fg_bigger_bg_mask_upper[small_person_and_blue_mask_upper_idx]=(small_fg_bigger_bg_mask_upper>0.92).astype(np.uint8)
+        small_probs_fg_bigger_bg_mask_upper[small_person_and_blue_mask_upper_idx]=(small_fg_bigger_bg_mask_upper>0.97).astype(np.uint8)
 
         #### now for the middle
         
