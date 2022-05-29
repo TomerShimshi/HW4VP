@@ -152,8 +152,9 @@ def background_subtraction(input_video_path):
                                      max(0, y_mean - constants.WINDOW_H  // 2):min(h, y_mean + constants.WINDOW_H // 2),
                                      max(0, x_mean - constants.WINDOW_W // 2):min(w, x_mean + constants.WINDOW_W // 2)]
         upper_mask= small_person_and_blue_mask.copy()
+        
         ## NEED TO ADD SMALLER WINDOW
-        upper_mask[h//3:,:]=0
+        upper_mask[h//3:, : ]=0
         small_person_and_blue_mask_upper_idx = np.where(upper_mask == 1)
         
         small_fg_prob_stacked_upper = np.fromiter(map(lambda elem:utilis.check_if_in_dic(fg_pdf_memo,elem,fg_pdf),map(tuple,small_frame_bgr[small_person_and_blue_mask_upper_idx])),
@@ -194,7 +195,7 @@ def background_subtraction(input_video_path):
         small_probs_fg_bigger_bg_mask_lower= np.zeros(small_person_and_blue_mask.shape)
 
         small_probs_fg_bigger_bg_lower= (small_fg_prob_stacked_lower/(small_bg_prob_stacked_lower+small_fg_prob_stacked_lower))
-        small_probs_fg_bigger_bg_mask_lower[small_person_and_blue_mask_upper_idx]=(small_probs_fg_bigger_bg_lower>0.85).astype(np.uint8)
+        small_probs_fg_bigger_bg_mask_lower[small_person_and_blue_mask_upper_idx]=(small_probs_fg_bigger_bg_lower>0.9).astype(np.uint8)
 
         small_probs_fg_bigger_bg_mask = small_probs_fg_bigger_bg_mask_lower+small_probs_fg_bigger_bg_mask_upper+small_probs_fg_bigger_bg_mask_middle
         #small_probs_fg_bigger_bg_mask[small_person_and_blue_mask_idx]= (small_fg_prob_stacked>small_bg_prob_stacked*1.1).astype(np.uint8)
@@ -242,16 +243,16 @@ def background_subtraction(input_video_path):
         #small_or_mask[y_mean_shoes - y_offset:, :] = cv2.morphologyEx(small_or_mask[y_mean_shoes - y_offset:, :],
         #                                                             cv2.MORPH_CLOSE, np.ones((1, 20)),iterations=3)
         kernel =cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(8,8))
-        kernel_close =cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(3,3))
+        kernel_close =cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(5,5))
         small_or_mask[:constants.FACE_HIGHT, :] = cv2.morphologyEx(small_or_mask[:constants.FACE_HIGHT, :],cv2.MORPH_OPEN,kernel=kernel,iterations=1).astype(np.uint8)
-        small_or_mask[:constants.FACE_HIGHT, :] = cv2.morphologyEx(small_or_mask[:constants.FACE_HIGHT, :],cv2.MORPH_CLOSE,kernel=np.ones((1,8)),iterations=2)
+        #small_or_mask[:constants.FACE_HIGHT, :] = cv2.morphologyEx(small_or_mask[:constants.FACE_HIGHT, :],cv2.MORPH_CLOSE,kernel=np.ones((10,1)),iterations=2)
         small_or_mask[:constants.FACE_HIGHT, :] = cv2.morphologyEx(small_or_mask[:constants.FACE_HIGHT, :],cv2.MORPH_CLOSE,kernel=kernel_close,iterations=2)
         if y_mean_shoes>0:
             small_or_mask[y_mean_shoes - y_offset:, :] = cv2.morphologyEx(small_or_mask[y_mean_shoes - y_offset:, :],
-                                                                         cv2.MORPH_CLOSE, kernel=np.ones((1,10)))
+                                                                         cv2.MORPH_CLOSE, kernel=np.ones((1,20)))
             small_or_mask[y_mean_shoes - y_offset:, :] = cv2.morphologyEx(small_or_mask[y_mean_shoes - y_offset:, :],
                                                                          cv2.MORPH_CLOSE, kernel=np.ones((20,1)))
-        small_or_mask = cv2.morphologyEx(small_or_mask,cv2.MORPH_CLOSE, kernel=kernel_close,iterations=1)
+        #small_or_mask = cv2.morphologyEx(small_or_mask,cv2.MORPH_CLOSE, kernel=kernel_close,iterations=1)
         or_mask = np.zeros(person_and_blue_mask.shape)
         or_mask [max(0,y_mean-constants.WINDOW_H//2):min(h,y_mean+constants.WINDOW_H//2),max(0,x_mean- constants.WINDOW_W//2):min(w,x_mean+constants.WINDOW_W//2)]=small_or_mask
         or_mask_list[frame_idx]=or_mask
