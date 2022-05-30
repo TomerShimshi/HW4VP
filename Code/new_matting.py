@@ -66,45 +66,22 @@ def matting (input_video_path, BW_mask_path,bg_path):
         small_bgr_frame = frame[mask_top_idx:mask_bottom_idx,mask_left_idx:mask_right_idx]
         small_mask = mask[mask_top_idx:mask_bottom_idx,mask_left_idx:mask_right_idx]
         small_new_bg = new_bg[mask_top_idx:mask_bottom_idx,mask_left_idx:mask_right_idx]
-        '''
-        small_luma_frame = luma_frame[max(0, y_mean - constants.WINDOW_H  // 2):min(h, y_mean + constants.WINDOW_H // 2),
-                                     max(0, x_mean - constants.WINDOW_W // 2):min(w, x_mean + constants.WINDOW_W // 2)]
-        small_bgr_frame = frame[max(0, y_mean - constants.WINDOW_H  // 2):min(h, y_mean + constants.WINDOW_H // 2),
-                                     max(0, x_mean - constants.WINDOW_W // 2):min(w, x_mean + constants.WINDOW_W // 2)]
-        small_mask = mask[max(0, y_mean - constants.WINDOW_H  // 2):min(h, y_mean + constants.WINDOW_H // 2),
-                                     max(0, x_mean - constants.WINDOW_W // 2):min(w, x_mean + constants.WINDOW_W // 2)]
-        small_new_bg = new_bg[max(0, y_mean - constants.WINDOW_H  // 2):min(h, y_mean + constants.WINDOW_H // 2),
-                             max(0, x_mean - constants.WINDOW_W // 2):min(w, x_mean + constants.WINDOW_W // 2)]
-        '''
+        
 
         #inorder to recive a trimap we calculate the erode image as fg
-        '''
-        now we try somthing new
-
-        
-
-        small_mask_idx = np.where(small_mask == 1)
-        shuff = mask[max(0, y_mean - 2*(constants.SMALL_WINDOW_H//3)  ):min(h, y_mean +constants.SMALL_WINDOW_H//3 ),
-                        max(0, x_mean - constants.SMALL_WINDOW_W // 2):min(w, x_mean + constants.SMALL_WINDOW_W // 2) ]
-        small_fg_mask = np.zeros(mask.shape).astype(np.uint8)
-        #small_fg_mask = cv2.erode(small_mask,kernel=np.ones((7,7)),iterations=constants.ERODE_N_ITER)
-        small_fg_mask [max(0, y_mean - 2*(constants.SMALL_WINDOW_H//3)  ):min(h, y_mean +constants.SMALL_WINDOW_H//3 ),
-                        max(0, x_mean - constants.SMALL_WINDOW_W // 2):min(w, x_mean + constants.SMALL_WINDOW_W // 2) ]= shuff #shuff [max(0, y_mean - constants.SMALL_WINDOW_H  // 2):min(h, y_mean + constants.SMALL_WINDOW_H // 2),
-                                                                                                                           #max(0, x_mean - constants.SMALL_WINDOW_W // 2):min(w, x_mean + constants.SMALL_WINDOW_W // 2) ]
-        
-        small_fg_mask =small_fg_mask[max(0, y_mean - constants.WINDOW_H  // 2):min(h, y_mean + constants.WINDOW_H // 2),
-                                     max(0, x_mean - constants.WINDOW_W // 2):min(w, x_mean + constants.WINDOW_W // 2)] 
-        temp2 = np.max(small_fg_mask)
-        if temp2 == 0:
-            t=1
-        '''
+      
 
         small_fg_mask =cv2.erode(small_mask,kernel=kernel,iterations=constants.ERODE_N_ITER)#cv2.morphologyEx(small_mask,cv2.cv2.MORPH_OPEN, kernel=kernel,iterations=constants.ERODE_N_ITER)
+        #small_fg_mask = small_fg_mask.astype(uint8)
+        
+        
         #cv2.erode(small_mask,kernel=np.ones((7,7)),iterations=constants.ERODE_N_ITER)
        
         #small_fg_mask = fg_mask[mask_top_idx:mask_bottom_idx,mask_left_idx:mask_right_idx]
         #for more documantation GoTo: https://github.com/taigw/GeodisTK/blob/master/demo2d.py
-        small_fg_dist_map = GeodisTK.geodesic2d_raster_scan(small_luma_frame,small_fg_mask,1.0,constants.GEO_N_ITER)
+
+
+        #small_fg_dist_map = GeodisTK.geodesic2d_raster_scan(small_luma_frame,small_fg_mask,1.0,constants.GEO_N_ITER)
 
         #inorder to recive a trimap we calculate the dialate image as bg the trimap
         #will be the diff between them
@@ -113,11 +90,33 @@ def matting (input_video_path, BW_mask_path,bg_path):
         temp_mask =small_mask.copy()
         temp_mask =cv2.dilate(temp_mask, kernel=kernel,iterations=constants.DIAL_N_ITER)
         small_bg_mask = 1-temp_mask
+        small_bg_mask = small_bg_mask
         #small_bg_mask = bg_mask[mask_top_idx:mask_bottom_idx,mask_left_idx:mask_right_idx]
         #for more documantation GoTo: https://github.com/taigw/GeodisTK/blob/master/demo2d.py
-        small_bg_dist_map = GeodisTK.geodesic2d_raster_scan(small_luma_frame,small_bg_mask,1.0,constants.GEO_N_ITER)
 
+
+        #small_bg_dist_map = GeodisTK.geodesic2d_raster_scan(small_luma_frame,small_bg_mask,1.0,constants.GEO_N_ITER)
+
+
+        #NOW WE WANT TO BUILD THE KDE FOR THE BG AND FG TO CALC THE PRIOR FOR ALPHA
+        fg_idx = utilis.choose_randome_indecis(small_fg_mask,220)
+        bg_idx = utilis.choose_randome_indecis(small_bg_mask,220)
+        fg_pdf = utilis.matting_estimate_pdf(dataset_valus=small_bgr_frame,bw_method=constants.BW_MATTING,idx= fg_idx )
+        bg_pdf = utilis.matting_estimate_pdf(dataset_valus=small_bgr_frame,bw_method=constants.BW_MATTING,idx= bg_idx )
+        idx =  np.where(small_mask > - 1)
+        small_bg_probs = bg_pdf(small_bgr_frame[idx])
+        small_fg_probs = fg_pdf(small_bgr_frame[idx])
+        #small_luma_frame = small_luma_frame.astype(np.float32)
+        temp = np.round(255*small_bg_probs/(np.max(small_bg_probs) - np.min(small_bg_probs))).astype(uint8)
+        #shuff = np.copy(temp).astype(uint8)
+        #temp=temp.astype(uint8)
+        
+        
         #now we build the trimap zone
+
+
+        small_bg_dist_map = GeodisTK.geodesic2d_raster_scan(small_luma_frame,temp,1.0,constants.GEO_N_ITER)
+        small_fg_dist_map = GeodisTK.geodesic2d_raster_scan(small_luma_frame,small_fg_probs,1.0,constants.GEO_N_ITER)
 
         small_fg_dist_map = small_fg_dist_map/(small_fg_dist_map+small_bg_dist_map+EPSILON)
         small_bg_dist_map = 1-small_fg_dist_map
@@ -132,18 +131,12 @@ def matting (input_video_path, BW_mask_path,bg_path):
         temp = np.count_nonzero(small_accepted_bg_mask)
         if temp<150:
             t=1
-        #NOW WE WANT TO BUILD THE KDE FOR THE BG AND FG TO CALC THE PRIOR FOR ALPHA
+       
 
-        fg_idx = utilis.choose_randome_indecis(small_accepted_fg_mask,220)
-        bg_idx = utilis.choose_randome_indecis(small_accepted_bg_mask,220)
-        fg_pdf = utilis.matting_estimate_pdf(dataset_valus=small_bgr_frame,bw_method=constants.BW_MATTING,idx= fg_idx )
-        bg_pdf = utilis.matting_estimate_pdf(dataset_valus=small_bgr_frame,bw_method=constants.BW_MATTING,idx= bg_idx )
-
-        small_fg_probs = fg_pdf(small_bgr_frame[small_trimap_dist_map_idx])
-        small_bg_probs = bg_pdf(small_bgr_frame[small_trimap_dist_map_idx])
+        
 
         #NOW we want to find Alpha
-        w_fg =small_fg_probs/ (EPSILON+np.power(small_fg_dist_map[small_trimap_dist_map_idx],constants.R))
+        w_fg =small_fg_dist_map/ (EPSILON+np.power(small_fg_dist_map[small_trimap_dist_map_idx],constants.R))
         w_bg = small_bg_probs /(EPSILON+np.power(small_bg_dist_map[small_trimap_dist_map_idx],constants.R))
         alpha = w_fg/(w_fg+w_bg+EPSILON)
         
