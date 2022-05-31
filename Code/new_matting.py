@@ -14,7 +14,7 @@ import utilis
 ID1 = 203200480
 ID2 = 320521461
 
-EPSILON = 10**-10
+EPSILON = 0 #10**-20
 my_logger = logging.getLogger('MyLogger')
 def matting (input_video_path, BW_mask_path,bg_path):
     my_logger.info('Starting Background Subtraction')
@@ -103,25 +103,36 @@ def matting (input_video_path, BW_mask_path,bg_path):
         bg_idx = utilis.choose_randome_indecis(small_bg_mask,220)
         fg_pdf = utilis.matting_estimate_pdf(dataset_valus=small_bgr_frame,bw_method=constants.BW_MATTING,idx= fg_idx )
         bg_pdf = utilis.matting_estimate_pdf(dataset_valus=small_bgr_frame,bw_method=constants.BW_MATTING,idx= bg_idx )
-        big_trimap = (1-small_bg_mask)-small_fg_mask
-        idx =  np.where(big_trimap > - 1)
+        
+        idx =  np.where(small_mask >-1)
         small_bg_probs = bg_pdf(small_bgr_frame[idx])
         small_fg_probs = fg_pdf(small_bgr_frame[idx])
-        #small_luma_frame = small_luma_frame.astype(np.float32)
-        temp =cv2.normalize(src=small_bg_probs, dst=None, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_8U) #np.rint(255*small_bg_probs/(np.max(small_bg_probs) - np.min(small_bg_probs)),dtype= uint8)
-        temp2 =cv2.normalize(src=small_fg_probs, dst=None, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_8U)
+        small_fg_probs=small_fg_probs/(small_fg_probs+small_bg_probs)
+        small_fg_probs_for_dist= np.where(small_fg_probs>0.6,1,0)
+        small_bg_probs_for_dist=1-small_fg_probs
+        small_luma_frame = small_luma_frame.astype(np.float32)
+        small_bg_probs =cv2.normalize(src=small_fg_probs_for_dist, dst=None, alpha=0, beta=1, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_8U) #np.rint(255*small_bg_probs/(np.max(small_bg_probs) - np.min(small_bg_probs)),dtype= uint8)
+        small_fg_probs =cv2.normalize(src=small_fg_probs, dst=None, alpha=0, beta=1, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_8U)
+        
+        
         #shuff = np.copy(temp).astype(uint8)
         #temp=temp.astype(uint8)
         
         
-        #now we build the trimap zone
+        #now we buikd the dist map
 
 
-        small_bg_dist_map = GeodisTK.geodesic2d_raster_scan(small_luma_frame,temp,1.0,constants.GEO_N_ITER)
-        small_fg_dist_map = GeodisTK.geodesic2d_raster_scan(small_luma_frame,temp2,1.0,constants.GEO_N_ITER)
+        small_bg_dist_map = GeodisTK.geodesic2d_raster_scan(small_luma_frame,small_bg_probs,1.0,constants.GEO_N_ITER)
+        small_fg_dist_map = GeodisTK.geodesic2d_raster_scan(small_luma_frame,small_fg_probs,1.0,constants.GEO_N_ITER)
+        small_bg_probs = cv2.resize(small_bg_probs,(small_luma_frame.shape[1],small_luma_frame.shape[0]))
+        small_fg_probs = cv2.resize(small_bg_probs,(small_luma_frame.shape[1],small_luma_frame.shape[0]))
+        #accourding to alex:
+        fg = np.where(small_fg_dist_map-small_bg_dist_map <=0,small_fg_dist_map,0)
 
-        small_fg_dist_map = small_fg_dist_map/(small_fg_dist_map+small_bg_dist_map+EPSILON)
+
+        small_fg_dist_map = small_fg_dist_map/(small_fg_dist_map+small_bg_dist_map)
         small_bg_dist_map = 1-small_fg_dist_map
+        
         small_trimap_dist_map = (np.abs(small_bg_dist_map-small_fg_dist_map<constants.EPSILON_SMALL_BAND))
         small_trimap_dist_map_idx = np.where(small_trimap_dist_map==1)
 
@@ -138,14 +149,14 @@ def matting (input_video_path, BW_mask_path,bg_path):
         
 
         #NOW we want to find Alpha
-        w_fg =small_fg_probs/ (EPSILON+np.power(small_fg_dist_map[idx],constants.R))
-        w_bg = small_bg_probs /(EPSILON+np.power(small_bg_dist_map[idx],constants.R))
+        w_fg =small_fg_probs[small_trimap_dist_map_idx]/ (EPSILON+np.power(small_fg_dist_map[small_trimap_dist_map_idx],constants.R))
+        w_bg = small_bg_probs[small_trimap_dist_map_idx] /(EPSILON+np.power(small_bg_dist_map[small_trimap_dist_map_idx],constants.R))
         alpha = w_fg/(w_fg+w_bg+EPSILON)
         
         #small_fg_mask_test =cv2.morphologyEx(small_mask,cv2.cv2.MORPH_OPEN, kernel=np.ones((11,11)),iterations=constants.ERODE_N_ITER) #cv2.erode(small_mask,kernel=np.ones((11,11)),iterations=constants.ERODE_N_ITER)
         #small_alpha = np.copy(small_fg_mask).astype(np.float)
         small_alpha = np.copy(small_accepted_fg_mask).astype(np.float)#np.copy(small_fg_mask).astype(np.float)
-        small_alpha[idx]= np.maximum(alpha,small_accepted_fg_mask[idx])
+        small_alpha[small_trimap_dist_map_idx]= np.maximum(alpha,small_accepted_fg_mask[small_trimap_dist_map_idx])
 
         
         #now we implement the alpha 
