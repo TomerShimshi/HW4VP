@@ -14,7 +14,7 @@ import utilis
 ID1 = 203200480
 ID2 = 320521461
 
-EPSILON = 0 #10**-20
+EPSILON = 10**-30
 my_logger = logging.getLogger('MyLogger')
 def matting (input_video_path, BW_mask_path,bg_path):
     my_logger.info('Starting Background Subtraction')
@@ -59,7 +59,7 @@ def matting (input_video_path, BW_mask_path,bg_path):
         mask_top_idx = max(0,mask_top_idx-OFFSET)
         
         #resize the image to look just at a small window aroud the person
-        mask_idx = np.where(mask==1)
+       
         #y_mean,x_mean = (np.mean(mask_idx[0]).astype(int),np.mean(mask_idx[1]).astype(int))
         
         small_luma_frame = luma_frame[mask_top_idx:mask_bottom_idx,mask_left_idx:mask_right_idx]
@@ -72,23 +72,9 @@ def matting (input_video_path, BW_mask_path,bg_path):
       
 
         small_fg_mask =cv2.erode(small_mask,kernel=kernel,iterations=constants.ERODE_N_ITER)#cv2.morphologyEx(small_mask,cv2.cv2.MORPH_OPEN, kernel=kernel,iterations=constants.ERODE_N_ITER)
-        #small_fg_mask = small_fg_mask.astype(uint8)
-        
-        
-        #cv2.erode(small_mask,kernel=np.ones((7,7)),iterations=constants.ERODE_N_ITER)
        
-        #small_fg_mask = fg_mask[mask_top_idx:mask_bottom_idx,mask_left_idx:mask_right_idx]
-        #for more documantation GoTo: https://github.com/taigw/GeodisTK/blob/master/demo2d.py
-
-
-        #small_fg_dist_map = GeodisTK.geodesic2d_raster_scan(small_luma_frame,small_fg_mask,1.0,constants.GEO_N_ITER)
-
-        #inorder to recive a trimap we calculate the dialate image as bg the trimap
-        #will be the diff between them
-
-        #small_bg_mask = cv2.dilate(small_mask,kernel=np.ones((3,3)),iterations=constants.DIAL_N_ITER)
-        temp_mask =small_mask.copy()
-        temp_mask =cv2.dilate(temp_mask, kernel=kernel,iterations=constants.DIAL_N_ITER)
+        #temp_mask =small_mask.copy()
+        temp_mask =cv2.dilate(small_mask, kernel=kernel,iterations=constants.DIAL_N_ITER)
         small_bg_mask = 1-temp_mask
         
         #small_bg_mask = bg_mask[mask_top_idx:mask_bottom_idx,mask_left_idx:mask_right_idx]
@@ -107,11 +93,15 @@ def matting (input_video_path, BW_mask_path,bg_path):
         idx =  np.where(small_mask >-1)
         small_bg_probs = bg_pdf(small_bgr_frame[idx])
         small_fg_probs = fg_pdf(small_bgr_frame[idx])
+        #small_fg_probs = small_fg_probs/np.sum(small_fg_probs)
+        #small_bg_probs = small_bg_probs/ np.sum(small_bg_probs)
+        
+        
         small_fg_probs=small_fg_probs/(small_fg_probs+small_bg_probs)
-        small_bg_probs = 1-small_fg_probs
+        small_bg_probs = 1.0-small_fg_probs+EPSILON
         small_fg_probs_for_dist= np.where(small_fg_probs>constants.Min_Prob,1,0)
         
-        small_bg_probs_for_dist=1-small_fg_probs_for_dist
+        small_bg_probs_for_dist=1.0-small_fg_probs_for_dist
         small_luma_frame = small_luma_frame.astype(np.float32)
         small_fg_probs_for_dist =cv2.normalize(src=small_fg_probs_for_dist, dst=None, alpha=0, beta=1, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_8U) #np.rint(255*small_bg_probs/(np.max(small_bg_probs) - np.min(small_bg_probs)),dtype= uint8)
         small_bg_probs_for_dist =cv2.normalize(src=small_bg_probs_for_dist, dst=None, alpha=0, beta=1, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_8U)
@@ -132,28 +122,35 @@ def matting (input_video_path, BW_mask_path,bg_path):
         #fg = np.where(small_fg_dist_map-small_bg_dist_map <=0,small_fg_dist_map,0)
 
 
-        small_fg_dist_map = small_fg_dist_map/(small_fg_dist_map+small_bg_dist_map)
-        small_bg_dist_map = 1-small_fg_dist_map
+    #$$$$$$$% HERE TEST
+
+        small_fg_dist_map_norm = small_fg_dist_map/(small_fg_dist_map+small_bg_dist_map)
+        small_bg_dist_map_norm = small_bg_dist_map/(small_fg_dist_map+small_bg_dist_map)
         
-        small_trimap_dist_map = (np.abs(small_bg_dist_map-small_fg_dist_map<constants.EPSILON_SMALL_BAND))
+        small_trimap_dist_map = (np.abs(small_bg_dist_map_norm-small_fg_dist_map_norm<constants.EPSILON_SMALL_BAND))
         small_trimap_dist_map_idx = np.where(small_trimap_dist_map==1)
 
-        small_accepted_fg_mask = (small_fg_dist_map<small_bg_dist_map-constants.EPSILON_SMALL_BAND).astype(np.uint8)
-        small_accepted_bg_mask = (small_bg_dist_map>=small_fg_dist_map-constants.EPSILON_SMALL_BAND).astype(np.uint8)
+        small_accepted_fg_mask = (small_fg_dist_map_norm<small_bg_dist_map_norm-constants.EPSILON_SMALL_BAND).astype(np.uint8)
+        #small_accepted_bg_mask = (small_bg_dist_map_norm>=small_fg_dist_map-constants.EPSILON_SMALL_BAND).astype(np.uint8)
         temp = np.count_nonzero(small_accepted_fg_mask)
         if temp<150:
             t=1
-        temp = np.count_nonzero(small_accepted_bg_mask)
-        if temp<150:
-            t=1
+       
        
 
         
 
         #NOW we want to find Alpha
-        w_fg =small_fg_probs[small_trimap_dist_map_idx]/ (EPSILON+np.power(small_fg_dist_map[small_trimap_dist_map_idx],constants.R))
-        w_bg = small_bg_probs[small_trimap_dist_map_idx] /(EPSILON+np.power(small_bg_dist_map[small_trimap_dist_map_idx],constants.R))
-        alpha = w_fg/(w_fg+w_bg+EPSILON)
+        w_fg =small_fg_probs[small_trimap_dist_map_idx]/ (EPSILON+np.power(small_fg_dist_map_norm[small_trimap_dist_map_idx],constants.R))
+        w_bg = small_bg_probs[small_trimap_dist_map_idx] /(EPSILON+np.power(small_bg_dist_map_norm[small_trimap_dist_map_idx],constants.R))
+        w_bg=(w_bg/(np.max(w_bg)-np.min(w_bg)))*1.0
+        if np.min(w_bg) == np.inf:
+            alpha= w_fg
+        else:
+             alpha = w_fg/(w_fg+w_bg+EPSILON)
+        #w_bg=(w_bg/(np.max(w_bg)-np.min(w_bg)))*1.0 #np.interp(w_bg, (w_bg.min(), w_bg.max()), (0, 1.0))
+       
+        temp= np.max(alpha)
         
        
 

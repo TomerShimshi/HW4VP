@@ -164,7 +164,10 @@ def background_subtraction(input_video_path):
         small_probs_fg_bigger_bg_mask_upper= np.zeros(small_person_and_blue_mask.shape)
 
         small_fg_bigger_bg_mask_upper= (small_fg_prob_stacked_upper/(small_bg_prob_stacked_upper+small_fg_prob_stacked_upper))
-        small_probs_fg_bigger_bg_mask_upper[small_person_and_blue_mask_upper_idx]=(small_fg_bigger_bg_mask_upper>0.97).astype(np.uint8)
+        if frame_idx <90:
+            small_probs_fg_bigger_bg_mask_upper[small_person_and_blue_mask_upper_idx]=(small_fg_bigger_bg_mask_upper>0.67).astype(np.uint8)
+        else:
+            small_probs_fg_bigger_bg_mask_upper[small_person_and_blue_mask_upper_idx]=(small_fg_bigger_bg_mask_upper>0.97).astype(np.uint8)
 
         #### now for the middle
         
