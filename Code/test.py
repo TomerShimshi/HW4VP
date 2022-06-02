@@ -4,6 +4,7 @@ import cv2
 import numpy as np
 import tqdm
 
+
 import GeodisTK
 from scipy.stats import gaussian_kde
 
@@ -85,14 +86,15 @@ def matting (input_video_path, BW_mask_path,bg_path):
 
 
         #NOW WE WANT TO BUILD THE KDE FOR THE BG AND FG TO CALC THE PRIOR FOR ALPHA
+        idx =  np.where(small_mask >-1)
         fg_idx = utilis.choose_randome_indecis(small_fg_mask,750)
         bg_idx = utilis.choose_randome_indecis(small_bg_mask,750)
-        fg_pdf = utilis.matting_estimate_pdf(dataset_valus=small_bgr_frame,bw_method=constants.BW_MATTING,idx= fg_idx )
-        bg_pdf = utilis.matting_estimate_pdf(dataset_valus=small_bgr_frame,bw_method=constants.BW_MATTING,idx= bg_idx )
+        fg_pdf = utilis.matting_estimate_pdf_test(dataset_valus=small_bgr_frame,bw_method=constants.BW_MATTING,idx= fg_idx ,grid=idx)
+        bg_pdf = utilis.matting_estimate_pdf_test(dataset_valus=small_bgr_frame,bw_method=constants.BW_MATTING,idx= bg_idx,grid=idx )
 
         
         
-        idx =  np.where(small_mask >-1)
+        
        
         small_bg_probs = bg_pdf(small_bgr_frame[idx])
         small_fg_probs = fg_pdf(small_bgr_frame[idx])
