@@ -14,7 +14,7 @@ import utilis
 ID1 = 203200480
 ID2 = 320521461
 
-EPSILON = 10**-10
+EPSILON = 10**-30
 my_logger = logging.getLogger('MyLogger')
 def matting (input_video_path, BW_mask_path,bg_path):
     my_logger.info('Starting Background Subtraction')
@@ -120,7 +120,7 @@ def matting (input_video_path, BW_mask_path,bg_path):
         #now we build the trimap zone
 
         small_fg_dist_map = small_fg_dist_map/(small_fg_dist_map+small_bg_dist_map)
-        small_bg_dist_map = 1-small_fg_dist_map
+        small_bg_dist_map = 1.0-small_fg_dist_map
         small_trimap_dist_map = (np.abs(small_bg_dist_map-small_fg_dist_map<constants.EPSILON_SMALL_BAND))
         small_trimap_dist_map_idx = np.where(small_trimap_dist_map==1)
 
@@ -134,18 +134,26 @@ def matting (input_video_path, BW_mask_path,bg_path):
             t=1
         #NOW WE WANT TO BUILD THE KDE FOR THE BG AND FG TO CALC THE PRIOR FOR ALPHA
 
-        fg_idx = utilis.choose_randome_indecis(small_accepted_fg_mask,220)
-        bg_idx = utilis.choose_randome_indecis(small_accepted_bg_mask,220)
+        fg_idx = utilis.choose_randome_indecis(small_accepted_fg_mask,320)
+        bg_idx = utilis.choose_randome_indecis(small_accepted_bg_mask,320)
         fg_pdf = utilis.matting_estimate_pdf(dataset_valus=small_bgr_frame,bw_method=constants.BW_MATTING,idx= fg_idx )
         bg_pdf = utilis.matting_estimate_pdf(dataset_valus=small_bgr_frame,bw_method=constants.BW_MATTING,idx= bg_idx )
 
         small_fg_probs = fg_pdf(small_bgr_frame[small_trimap_dist_map_idx])
         small_bg_probs = bg_pdf(small_bgr_frame[small_trimap_dist_map_idx])
 
+        ### TEST
+        small_fg_probs = small_fg_probs/np.sum(small_fg_probs)
+        small_bg_probs = small_bg_probs/np.sum(small_bg_probs)
+
         #NOW we want to find Alpha
         w_fg =small_fg_probs/ (EPSILON+np.power(small_fg_dist_map[small_trimap_dist_map_idx],constants.R))
         w_bg = small_bg_probs /(EPSILON+np.power(small_bg_dist_map[small_trimap_dist_map_idx],constants.R))
         alpha = w_fg/(w_fg+w_bg+EPSILON)
+
+        #$$$$$%%%%%test$$$$$%%%%%%%%
+        alpha = (alpha/(alpha.max()-alpha.min()))*1.0
+
         
         #small_fg_mask_test =cv2.morphologyEx(small_mask,cv2.cv2.MORPH_OPEN, kernel=np.ones((11,11)),iterations=constants.ERODE_N_ITER) #cv2.erode(small_mask,kernel=np.ones((11,11)),iterations=constants.ERODE_N_ITER)
         #small_alpha = np.copy(small_fg_mask).astype(np.float)

@@ -35,7 +35,7 @@ def matting (input_video_path, BW_mask_path,bg_path):
     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(7,7))
     print('start mattin creation')
     pbar = tqdm.tqdm(total=n_frames)
-    for frame_idx, frame in enumerate(frames_bgr[:]):
+    for frame_idx, frame in enumerate(frames_bgr[:25]):
         luma_frame,_,_ = cv2.split(frames_yuv[frame_idx])
         mask = frames_mask[frame_idx]
         mask = (mask>150).astype(np.uint8)
@@ -93,12 +93,14 @@ def matting (input_video_path, BW_mask_path,bg_path):
         idx =  np.where(small_mask >-1)
         small_bg_probs = bg_pdf(small_bgr_frame[idx])
         small_fg_probs = fg_pdf(small_bgr_frame[idx])
+
+        #$$%%% TEST
         #small_fg_probs = small_fg_probs/np.sum(small_fg_probs)
         #small_bg_probs = small_bg_probs/ np.sum(small_bg_probs)
         
         
         small_fg_probs=small_fg_probs/(small_fg_probs+small_bg_probs)
-        small_bg_probs = 1.0-small_fg_probs+EPSILON
+        small_bg_probs = 1.0-small_fg_probs
         small_fg_probs_for_dist= np.where(small_fg_probs>constants.Min_Prob,1,0)
         
         small_bg_probs_for_dist=1.0-small_fg_probs_for_dist
