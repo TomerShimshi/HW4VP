@@ -130,6 +130,8 @@ def matting_estimate_pdf (dataset_valus, bw_method, idx):
     pdf = gaussian_kde(dataset=wanted_dataset_valus.T,bw_method=bw_method)
     return lambda x: pdf(x.T)
 
+
+
 def  check_if_in_dic(dic,element,func):
     if element in dic:
         return dic[element]
