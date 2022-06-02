@@ -86,9 +86,9 @@ def matting (input_video_path, BW_mask_path,bg_path):
 
 
         #NOW WE WANT TO BUILD THE KDE FOR THE BG AND FG TO CALC THE PRIOR FOR ALPHA
-        idx =  np.where(small_mask >-1)
-        fg_idx = utilis.choose_randome_indecis(small_fg_mask,750)
-        bg_idx = utilis.choose_randome_indecis(small_bg_mask,750)
+        idx =  np.where(small_bgr_frame >-1)
+        fg_idx = utilis.choose_randome_indecis(small_fg_mask,150)
+        bg_idx = utilis.choose_randome_indecis(small_bg_mask,150)
         fg_pdf = utilis.matting_estimate_pdf_test(dataset_valus=small_bgr_frame,bw_method=constants.BW_MATTING,idx= fg_idx ,grid=idx)
         bg_pdf = utilis.matting_estimate_pdf_test(dataset_valus=small_bgr_frame,bw_method=constants.BW_MATTING,idx= bg_idx,grid=idx )
 
@@ -96,8 +96,8 @@ def matting (input_video_path, BW_mask_path,bg_path):
         
         
        
-        small_bg_probs = bg_pdf(small_bgr_frame[idx])
-        small_fg_probs = fg_pdf(small_bgr_frame[idx])
+        small_bg_probs = bg_pdf[small_bgr_frame]
+        small_fg_probs = fg_pdf[small_bgr_frame[idx]]
 
         small_bg_probs = small_bg_probs/np.sum(small_bg_probs)
         small_fg_probs = small_fg_probs/np.sum(small_fg_probs)
