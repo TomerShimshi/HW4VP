@@ -35,7 +35,7 @@ def matting (input_video_path, BW_mask_path,bg_path):
     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(7,7))
     print('start mattin creation')
     pbar = tqdm.tqdm(total=n_frames)
-    for frame_idx, frame in enumerate(frames_bgr[:]):
+    for frame_idx, frame in enumerate(frames_bgr[:50]):
         luma_frame,_,_ = cv2.split(frames_yuv[frame_idx])
         mask = frames_mask[frame_idx]
         mask = (mask>150).astype(np.uint8)
@@ -99,7 +99,8 @@ def matting (input_video_path, BW_mask_path,bg_path):
             t=1
         '''
 
-        small_fg_mask =cv2.erode(small_mask,kernel=kernel,iterations=constants.ERODE_N_ITER)#cv2.morphologyEx(small_mask,cv2.cv2.MORPH_OPEN, kernel=kernel,iterations=constants.ERODE_N_ITER)
+        fg_mask =cv2.erode(mask,kernel=kernel,iterations=constants.ERODE_N_ITER)#cv2.morphologyEx(small_mask,cv2.cv2.MORPH_OPEN, kernel=kernel,iterations=constants.ERODE_N_ITER)
+        small_fg_mask = fg_mask[mask_top_idx:mask_bottom_idx,mask_left_idx:mask_right_idx]
         #cv2.erode(small_mask,kernel=np.ones((7,7)),iterations=constants.ERODE_N_ITER)
        
         #small_fg_mask = fg_mask[mask_top_idx:mask_bottom_idx,mask_left_idx:mask_right_idx]
@@ -110,18 +111,20 @@ def matting (input_video_path, BW_mask_path,bg_path):
         #will be the diff between them
 
         #small_bg_mask = cv2.dilate(small_mask,kernel=np.ones((3,3)),iterations=constants.DIAL_N_ITER)
-        temp_mask =small_mask.copy()
-        temp_mask =cv2.dilate(temp_mask, kernel=kernel,iterations=constants.DIAL_N_ITER)
-        small_bg_mask = 1-temp_mask
+        
+        bg_mask =cv2.dilate(mask, kernel=kernel,iterations=constants.DIAL_N_ITER)
+        bg_mask = 1-bg_mask
+        small_bg_mask = bg_mask[mask_top_idx:mask_bottom_idx,mask_left_idx:mask_right_idx]
         #small_bg_mask = bg_mask[mask_top_idx:mask_bottom_idx,mask_left_idx:mask_right_idx]
         #for more documantation GoTo: https://github.com/taigw/GeodisTK/blob/master/demo2d.py
         small_bg_dist_map = GeodisTK.geodesic2d_raster_scan(small_luma_frame,small_bg_mask,1.0,constants.GEO_N_ITER)
+
 
         #now we build the trimap zone
 
         small_fg_dist_map = small_fg_dist_map/(small_fg_dist_map+small_bg_dist_map)
         small_bg_dist_map = 1.0-small_fg_dist_map
-        small_trimap_dist_map = (np.abs(small_bg_dist_map-small_fg_dist_map<constants.EPSILON_SMALL_BAND))
+        small_trimap_dist_map = (np.abs(small_bg_dist_map-small_fg_dist_map)<constants.EPSILON_SMALL_BAND)
         small_trimap_dist_map_idx = np.where(small_trimap_dist_map==1)
 
         small_accepted_fg_mask = (small_fg_dist_map<small_bg_dist_map-constants.EPSILON_SMALL_BAND).astype(np.uint8)
@@ -152,7 +155,7 @@ def matting (input_video_path, BW_mask_path,bg_path):
         alpha = w_fg/(w_fg+w_bg+EPSILON)
 
         #$$$$$%%%%%test$$$$$%%%%%%%%
-        alpha = (alpha/(alpha.max()-alpha.min()))*1.0
+        #alpha = (alpha/(alpha.max()-alpha.min()))*1.0
 
         
         #small_fg_mask_test =cv2.morphologyEx(small_mask,cv2.cv2.MORPH_OPEN, kernel=np.ones((11,11)),iterations=constants.ERODE_N_ITER) #cv2.erode(small_mask,kernel=np.ones((11,11)),iterations=constants.ERODE_N_ITER)

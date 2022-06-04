@@ -164,10 +164,10 @@ def background_subtraction(input_video_path):
         small_probs_fg_bigger_bg_mask_upper= np.zeros(small_person_and_blue_mask.shape)
 
         small_fg_bigger_bg_mask_upper= (small_fg_prob_stacked_upper/(small_bg_prob_stacked_upper+small_fg_prob_stacked_upper))
-        if frame_idx <90:
+        if frame_idx <50:
             small_probs_fg_bigger_bg_mask_upper[small_person_and_blue_mask_upper_idx]=(small_fg_bigger_bg_mask_upper>0.67).astype(np.uint8)
         else:
-            small_probs_fg_bigger_bg_mask_upper[small_person_and_blue_mask_upper_idx]=(small_fg_bigger_bg_mask_upper>0.97).astype(np.uint8)
+            small_probs_fg_bigger_bg_mask_upper[small_person_and_blue_mask_upper_idx]=(small_fg_bigger_bg_mask_upper>0.95).astype(np.uint8)
 
         #### now for the middle
         
@@ -183,8 +183,10 @@ def background_subtraction(input_video_path):
         small_probs_fg_bigger_bg_mask_middle= np.zeros(small_person_and_blue_mask.shape)
 
         small_probs_fg_bigger_bg_middle= (small_fg_prob_stacked_middle/(small_fg_prob_stacked_middle+small_bg_prob_stacked_middle))
-        small_probs_fg_bigger_bg_mask_middle[small_person_and_blue_mask_upper_idx]=(small_probs_fg_bigger_bg_middle>0.7).astype(np.uint8)
-
+        if frame_idx<50:
+            small_probs_fg_bigger_bg_mask_middle[small_person_and_blue_mask_upper_idx]=(small_probs_fg_bigger_bg_middle>0.5).astype(np.uint8)
+        else:
+            small_probs_fg_bigger_bg_mask_middle[small_person_and_blue_mask_upper_idx]=(small_probs_fg_bigger_bg_middle>0.7).astype(np.uint8)
         #### from here its the lower
 
         lower_mask= small_person_and_blue_mask.copy()
@@ -198,7 +200,7 @@ def background_subtraction(input_video_path):
         small_probs_fg_bigger_bg_mask_lower= np.zeros(small_person_and_blue_mask.shape)
 
         small_probs_fg_bigger_bg_lower= (small_fg_prob_stacked_lower/(small_bg_prob_stacked_lower+small_fg_prob_stacked_lower))
-        small_probs_fg_bigger_bg_mask_lower[small_person_and_blue_mask_upper_idx]=(small_probs_fg_bigger_bg_lower>0.9).astype(np.uint8)
+        small_probs_fg_bigger_bg_mask_lower[small_person_and_blue_mask_upper_idx]=(small_probs_fg_bigger_bg_lower>0.92).astype(np.uint8)
 
         small_probs_fg_bigger_bg_mask = small_probs_fg_bigger_bg_mask_lower+small_probs_fg_bigger_bg_mask_upper+small_probs_fg_bigger_bg_mask_middle
         #small_probs_fg_bigger_bg_mask[small_person_and_blue_mask_idx]= (small_fg_prob_stacked>small_bg_prob_stacked*1.1).astype(np.uint8)
@@ -255,7 +257,8 @@ def background_subtraction(input_video_path):
                                                                          cv2.MORPH_CLOSE, kernel=np.ones((1,20)))
             small_or_mask[y_mean_shoes - y_offset:, :] = cv2.morphologyEx(small_or_mask[y_mean_shoes - y_offset:, :],
                                                                          cv2.MORPH_CLOSE, kernel=np.ones((20,1)))
-        #small_or_mask = cv2.morphologyEx(small_or_mask,cv2.MORPH_CLOSE, kernel=kernel_close,iterations=1)
+        #if frame_idx<70:
+        #    small_or_mask = cv2.morphologyEx(small_or_mask,cv2.MORPH_CLOSE, kernel=kernel_close,iterations=2)
         or_mask = np.zeros(person_and_blue_mask.shape)
         or_mask [max(0,y_mean-constants.WINDOW_H//2):min(h,y_mean+constants.WINDOW_H//2),max(0,x_mean- constants.WINDOW_W//2):min(w,x_mean+constants.WINDOW_W//2)]=small_or_mask
         or_mask_list[frame_idx]=or_mask

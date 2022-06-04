@@ -153,7 +153,7 @@ def matting (input_video_path, BW_mask_path,bg_path):
         small_fg_dist_map_norm = (EPSILON+small_fg_dist_map)/(EPSILON+small_fg_dist_map+small_bg_dist_map)
         small_bg_dist_map_norm = 1-small_fg_dist_map_norm
         
-        small_trimap_dist_map = (np.abs(small_bg_dist_map_norm-small_fg_dist_map_norm<constants.EPSILON_SMALL_BAND))
+        small_trimap_dist_map = (np.abs(small_bg_dist_map_norm-small_fg_dist_map_norm)<constants.EPSILON_SMALL_BAND)
         small_trimap_dist_map_idx = np.where(small_trimap_dist_map==1)
 
         small_accepted_fg_mask = (small_fg_dist_map_norm<small_bg_dist_map_norm-constants.EPSILON_SMALL_BAND).astype(np.uint8)
