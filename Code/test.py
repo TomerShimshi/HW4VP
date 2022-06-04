@@ -38,6 +38,7 @@ def matting (input_video_path, BW_mask_path,bg_path):
     pbar = tqdm.tqdm(total=n_frames)
     for frame_idx, frame in enumerate(frames_bgr[:5]):
         luma_frame,_,_ = cv2.split(frames_yuv[frame_idx])
+        blue_fram,_,_ = cv2.split(frame)
         mask = frames_mask[frame_idx]
         mask = (mask>150).astype(np.uint8)
 
@@ -66,7 +67,7 @@ def matting (input_video_path, BW_mask_path,bg_path):
         small_luma_frame = luma_frame[mask_top_idx:mask_bottom_idx,mask_left_idx:mask_right_idx]
         small_bgr_frame = frame[mask_top_idx:mask_bottom_idx,mask_left_idx:mask_right_idx]
         small_mask = mask[mask_top_idx:mask_bottom_idx,mask_left_idx:mask_right_idx]
-        small_new_bg = new_bg[mask_top_idx:mask_bottom_idx,mask_left_idx:mask_right_idx]
+        small_blue_frame = blue_fram[mask_top_idx:mask_bottom_idx,mask_left_idx:mask_right_idx]
         
 
         #inorder to recive a trimap we calculate the erode image as fg
@@ -86,24 +87,49 @@ def matting (input_video_path, BW_mask_path,bg_path):
 
 
         #NOW WE WANT TO BUILD THE KDE FOR THE BG AND FG TO CALC THE PRIOR FOR ALPHA
-        idx =  np.where(small_bgr_frame >-1)
-        fg_idx = utilis.choose_randome_indecis(small_fg_mask,150)
-        bg_idx = utilis.choose_randome_indecis(small_bg_mask,150)
-        fg_pdf = utilis.matting_estimate_pdf_test(dataset_valus=small_bgr_frame,bw_method=constants.BW_MATTING,idx= fg_idx ,grid=idx)
-        bg_pdf = utilis.matting_estimate_pdf_test(dataset_valus=small_bgr_frame,bw_method=constants.BW_MATTING,idx= bg_idx,grid=idx )
+        idx =  np.where(small_blue_frame >-1)
+        grid = np.linspace(0,1900,1901)
+        fg_idx = utilis.choose_randome_indecis(small_fg_mask,1450)
+        bg_idx =  utilis.choose_randome_indecis(small_bg_mask,1450)
+        fg_pdf = utilis.matting_estimate_pdf_test(dataset_valus=small_luma_frame,bw_method=constants.BW_MATTING,idx= fg_idx ,grid=grid)
+        bg_pdf = utilis.matting_estimate_pdf_test(dataset_valus=small_luma_frame,bw_method=constants.BW_MATTING,idx= bg_idx,grid=grid )
+        denominator = np.add(fg_pdf,bg_pdf)
 
+        fg_pdf = fg_pdf/denominator
+        bg_pdf = bg_pdf/denominator
+
+        PB = bg_pdf[small_luma_frame]
+        PF = fg_pdf[small_luma_frame]
+        #PF= np.where(PF>constants.Min_Prob,255,0)
+        #PB= 255-PF
+        small_fg_probs_for_dist =cv2.normalize(src=PF, dst=None, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_8U) #np.rint(255*small_bg_probs/(np.max(small_bg_probs) - np.min(small_bg_probs)),dtype= uint8)
+        small_bg_probs_for_dist =cv2.normalize(src=PB, dst=None, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_8U)
+
+        small_bg_dist_map = GeodisTK.geodesic2d_raster_scan(small_luma_frame,small_bg_probs_for_dist,1.0,constants.GEO_N_ITER)
+        small_fg_dist_map = GeodisTK.geodesic2d_raster_scan(small_luma_frame,small_fg_probs_for_dist,1.0,constants.GEO_N_ITER)
+
+        small_bg_dist_map = ((small_bg_dist_map+EPSILON)/(small_fg_dist_map+small_fg_dist_map+EPSILON))*255#(small_bg_dist_map /np.max(small_bg_dist_map))*255 #((small_bg_dist_map+EPSILON)/(small_fg_dist_map+small_fg_dist_map+EPSILON))*255
+        small_bg_dist_map= np.where(small_bg_dist_map>255,255,small_bg_dist_map)
+        small_fg_dist_map = 255-small_bg_dist_map #(small_fg_dist_map/np.max(small_fg_dist_map))*255
+
+
+        #PF= ((PF/np.max(PF)))
+        #PF = np.where(PF>constants.Min_Prob,1,0)
+        #PB= 1- PF
+        
         
         
         
        
-        small_bg_probs = bg_pdf[small_bgr_frame]
-        small_fg_probs = fg_pdf[small_bgr_frame[idx]]
+        small_bg_probs = bg_pdf[small_luma_frame[:,:]]*255
+        small_fg_probs = fg_pdf[small_luma_frame]*255
 
-        small_bg_probs = small_bg_probs/np.sum(small_bg_probs)
-        small_fg_probs = small_fg_probs/np.sum(small_fg_probs)
 
-        small_bg_probs = (small_bg_probs/(small_bg_probs.max()- small_bg_probs.min()))*255.0+small_bg_probs.min()
-        small_fg_probs = (small_fg_probs/(small_fg_probs.max()- small_fg_probs.min()))*255.0+small_fg_probs.min()
+        #small_bg_probs = small_bg_probs/np.sum(small_bg_probs)
+        #small_fg_probs = small_fg_probs/np.sum(small_fg_probs)
+
+        #small_bg_probs = (small_bg_probs/(small_bg_probs.max()- small_bg_probs.min()))*255.0+small_bg_probs.min()
+        #small_fg_probs = (small_fg_probs/(small_fg_probs.max()- small_fg_probs.min()))*255.0+small_fg_probs.min()
 
         #small_fg_probs=small_fg_probs/(small_fg_probs+small_bg_probs)
         #small_bg_probs = 1.0-small_fg_probs
@@ -111,6 +137,7 @@ def matting (input_video_path, BW_mask_path,bg_path):
         
         #small_fg_probs=small_fg_probs/(small_fg_probs+small_bg_probs)
         #small_bg_probs = 1.0-small_fg_probs+EPSILON
+        '''
         small_fg_probs_for_dist= np.where(small_fg_probs>constants.Min_Prob,1,0)
 
         small_fg_probs = cv2.resize(small_fg_probs,(small_luma_frame.shape[1],small_luma_frame.shape[0]))
@@ -133,15 +160,15 @@ def matting (input_video_path, BW_mask_path,bg_path):
 
         #small_bg_dist_map = GeodisTK.geodesic2d_raster_scan(small_luma_frame,small_bg_probs_for_dist,1.0,constants.GEO_N_ITER)
         #small_fg_dist_map = GeodisTK.geodesic2d_raster_scan(small_luma_frame,small_fg_probs_for_dist,1.0,constants.GEO_N_ITER)
-        
+        '''
 
         #temp_mask[max(0, y_mean - constants.WINDOW_H  // 2):min(h, y_mean + constants.WINDOW_H // 2),max(0, x_mean - constants.WINDOW_W // 2):min(w, x_mean + constants.WINDOW_W // 2)] = small_fg_mask
-        idx_fg = np.where(dest2 >-1)
-        idx_bg = np.where(dest2 >-1)
+        #idx_fg = np.where(dest2 >-1)
+        #idx_bg = np.where(dest2 >-1)
         temp_fg = np.zeros(mask.shape)
         temp_bg = np.zeros(mask.shape)
-        temp_fg[idx_fg]=small_fg_probs[idx_fg]
-        temp_bg[idx_bg]=small_bg_probs[idx_bg]
+        temp_fg[idx]=small_fg_dist_map[idx]
+        temp_bg[idx]=small_bg_dist_map[idx]
         #frames_list.append(otzi.astype(np.uint8))
         matted_frames_list.append((temp_fg).astype(np.uint8))
         alpha_frame_list.append((temp_bg).astype(np.uint8))

@@ -131,9 +131,9 @@ def matting_estimate_pdf (dataset_valus, bw_method, idx):
     return lambda x: pdf(x.T) 
 
 def matting_estimate_pdf_test (dataset_valus, bw_method, idx,grid):
-    wanted_dataset_valus= dataset_valus[idx[:,0],idx[:,1],:]
+    wanted_dataset_valus= dataset_valus[idx[:,0],idx[:,1]]
     #wanted_dataset_valus= dataset_valus[idx]
-    pdf = gaussian_kde(dataset=wanted_dataset_valus.T,bw_method=bw_method)
+    pdf = gaussian_kde(dataset=wanted_dataset_valus.T,bw_method=bw_method/dataset_valus.std(ddof = 1))
     return pdf.evaluate(grid)
 
 

@@ -9,6 +9,7 @@ import matting
 import new_bg_sub
 import test
 import new_matting
+import new_matting_v2
 
 ID1 = 203200480
 ID2 = 320521461
@@ -17,4 +18,4 @@ ID2 = 320521461
 
 #background_subtraction.background_subtraction('Outputs\stabilized_{}_{}.avi'.format(ID1,ID2))
 #new_bg_sub.background_subtraction('Outputs\stabilized_{}_{}.avi'.format(ID1,ID2))
-test.matting('Outputs\stabilized_{}_{}.avi'.format(ID1,ID2),'Outputs\_binary_203200480_320521461.avi','Inputs\\background.jpg')
+new_matting_v2.matting('Outputs\stabilized_{}_{}.avi'.format(ID1,ID2),'Outputs\_binary_203200480_320521461.avi','Inputs\\background.jpg')
