@@ -32,16 +32,16 @@ end_bg = time.time()
 
 time_to_bg_in_min= np.round((end_bg- start_all)/60)
 print('time to finshe bg sub took {} minutes'.format(time_to_bg_in_min))
-
+'''
 new_matting_v2.matting('Outputs\stabilized_203200480_320521461.avi','Outputs\_binary_203200480_320521461.avi','Inputs\\background.jpg')
 end_mat = time.time()
 time_to_mat_in_min= np.round((end_mat- start_all)/60)
 print('time to finshe matting took {} minutes'.format(time_to_mat_in_min))
-'''
-tracking.tracking('Outputs\matt_{}_{}.avi'.format(ID1,ID2),'Outputs\_alpha_{}_{}.avi'.format(ID1,ID2))
-end_track = time.time()
-time_to_track_in_min= np.round((end_track- start_all)/60)
-print('time to finshe tracking took {} minutes'.format(time_to_track_in_min))
+
+#tracking.tracking('Outputs\matt_{}_{}.avi'.format(ID1,ID2),'Outputs\_alpha_{}_{}.avi'.format(ID1,ID2))
+#end_track = time.time()
+#time_to_track_in_min= np.round((end_track- start_all)/60)
+#print('time to finshe tracking took {} minutes'.format(time_to_track_in_min))
 
 
 ### NOW FOR THE LOGGING

@@ -45,7 +45,7 @@ def matting (input_video_path, BW_mask_path,bg_path):
 
         #close a small rectangle over the binary image
         
-        OFFSET = 100
+        OFFSET = 105
 
         mask_x_axis = np.where(mask ==1)[1]
         mask_left_idx =np.min(mask_x_axis)
