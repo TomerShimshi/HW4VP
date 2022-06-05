@@ -19,7 +19,7 @@ EPSILON = 10**-30
 my_logger = logging.getLogger('MyLogger')
 def matting (input_video_path, BW_mask_path,bg_path):
     start = time.time()
-    my_logger.info('Starting Background Subtraction')
+   
     cap = cv2.VideoCapture(input_video_path)
     cap_mask = cv2.VideoCapture(BW_mask_path)
     parameters = utilis.get_video_parameters(cap)
