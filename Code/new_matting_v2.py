@@ -1,5 +1,6 @@
 import logging
 from pickletools import uint8
+import time
 import cv2
 import numpy as np
 import tqdm
@@ -17,6 +18,7 @@ ID2 = 320521461
 EPSILON = 10**-30
 my_logger = logging.getLogger('MyLogger')
 def matting (input_video_path, BW_mask_path,bg_path):
+    start = time.time()
     my_logger.info('Starting Background Subtraction')
     cap = cv2.VideoCapture(input_video_path)
     cap_mask = cv2.VideoCapture(BW_mask_path)
@@ -43,7 +45,7 @@ def matting (input_video_path, BW_mask_path,bg_path):
 
         #close a small rectangle over the binary image
         
-        OFFSET = 30
+        OFFSET = 100
 
         mask_x_axis = np.where(mask ==1)[1]
         mask_left_idx =np.min(mask_x_axis)
@@ -121,6 +123,9 @@ def matting (input_video_path, BW_mask_path,bg_path):
         #for more documantation GoTo: https://github.com/taigw/GeodisTK/blob/master/demo2d.py
         small_bg_dist_map = GeodisTK.geodesic2d_raster_scan(small_luma_frame,small_bg_mask,1.0,constants.GEO_N_ITER)
 
+        ### WE ADD EPSILON TO AVIOD ZERO DIV
+        small_bg_dist_map[small_bg_dist_map==0]=EPSILON
+        small_fg_dist_map[small_fg_dist_map==0]=EPSILON
         #now we build the trimap zone
 
         small_fg_dist_map = small_fg_dist_map/(small_fg_dist_map+small_bg_dist_map)
@@ -138,26 +143,33 @@ def matting (input_video_path, BW_mask_path,bg_path):
             t=1
         #NOW WE WANT TO BUILD THE KDE FOR THE BG AND FG TO CALC THE PRIOR FOR ALPHA
 
-        fg_idx = utilis.choose_randome_indecis(small_accepted_fg_mask,1320)
-        bg_idx = utilis.choose_randome_indecis(small_accepted_bg_mask,1320)
-        grid = np.linspace(0,1900,1901)
+        fg_idx = utilis.choose_randome_indecis(small_accepted_fg_mask,1520)
+        bg_idx = utilis.choose_randome_indecis(small_accepted_bg_mask,1520)
+        grid = np.linspace(0,2900,2901)
         fg_pdf = utilis.matting_estimate_pdf_test(dataset_valus=small_blue_frame,bw_method=constants.BW_MATTING,idx= fg_idx ,grid=grid)
         bg_pdf = utilis.matting_estimate_pdf_test(dataset_valus=small_blue_frame,bw_method=constants.BW_MATTING,idx= bg_idx,grid=grid )
+        ### HERE IS SOMTING NEW TO TEST
+        fg_pdf[fg_pdf==0]=EPSILON
+        bg_pdf[bg_pdf==0]= EPSILON
         denominator = np.add(fg_pdf,bg_pdf)
 
-        fg_pdf = (fg_pdf+EPSILON)/(denominator +EPSILON)
-        bg_pdf = (bg_pdf+EPSILON)/(denominator +EPSILON)
+        fg_pdf = (fg_pdf)/(denominator)
+        bg_pdf = (bg_pdf)/(denominator)
+        
+
+        #fg_pdf = (fg_pdf+EPSILON)/(denominator +EPSILON)
+        #bg_pdf = (bg_pdf+EPSILON)/(denominator +EPSILON)
 
         PB = bg_pdf[small_blue_frame]
         PF = fg_pdf[small_blue_frame]
 
         #NOW we want to find Alpha
-        w_fg =PF[small_trimap_dist_map_idx]/ (EPSILON+np.power(small_fg_dist_map[small_trimap_dist_map_idx],constants.R))
-        w_bg = (PB[small_trimap_dist_map_idx]+EPSILON) /(EPSILON+np.power(small_bg_dist_map[small_trimap_dist_map_idx],constants.R))
-        alpha = w_fg/(w_fg+w_bg+EPSILON)
+        w_fg =PF[small_trimap_dist_map_idx]/ (np.power(small_fg_dist_map[small_trimap_dist_map_idx],constants.R))
+        w_bg = (PB[small_trimap_dist_map_idx]) /(np.power(small_bg_dist_map[small_trimap_dist_map_idx],constants.R))
+        alpha = w_fg/(w_fg+w_bg)
 
         #$$$$$%%%%%test$$$$$%%%%%%%%
-        #alpha = (alpha/(alpha.max()-alpha.min()))*1.0
+        alpha = (alpha/(alpha.max()))*1.0
         #alpha = cv2.morphologyEx(alpha,cv2.MORPH_OPEN,kernel=kernel,iterations=1)
         
         #small_fg_mask_test =cv2.morphologyEx(small_mask,cv2.cv2.MORPH_OPEN, kernel=np.ones((11,11)),iterations=constants.ERODE_N_ITER) #cv2.erode(small_mask,kernel=np.ones((11,11)),iterations=constants.ERODE_N_ITER)
@@ -165,6 +177,7 @@ def matting (input_video_path, BW_mask_path,bg_path):
         small_alpha = np.copy(small_accepted_fg_mask).astype(np.float)#np.copy(small_fg_mask).astype(np.float)
         small_alpha[small_trimap_dist_map_idx]= alpha #np.maximum(alpha,small_accepted_fg_mask[small_trimap_dist_map_idx])
         #small_alpha =cv2.morphologyEx(small_alpha,cv2.MORPH_CLOSE, kernel=kernel,iterations=1)
+        small_alpha[:constants.FACE_HIGHT, :] = cv2.morphologyEx(small_alpha[:constants.FACE_HIGHT, :],cv2.MORPH_CLOSE,kernel=kernel,iterations=1)
 
         
         #now we implement the alpha 
@@ -203,4 +216,6 @@ def matting (input_video_path, BW_mask_path,bg_path):
     utilis.write_video('Outputs\matt_{}_{}.avi'.format(ID1,ID2),parameters=parameters,frames=matted_frames_list,isColor=True)
 
     utilis.write_video('Outputs\_alpha_{}_{}.avi'.format(ID1,ID2),parameters=parameters,frames=alpha_frame_list,isColor=False)
+    end = time.time()
+    print('matting took {}'.format(end-start))
 

@@ -35,7 +35,7 @@ def matting (input_video_path, BW_mask_path,bg_path):
     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(7,7))
     print('start mattin creation')
     pbar = tqdm.tqdm(total=n_frames)
-    for frame_idx, frame in enumerate(frames_bgr[:25]):
+    for frame_idx, frame in enumerate(frames_bgr[:50]):
         luma_frame,_,_ = cv2.split(frames_yuv[frame_idx])
         mask = frames_mask[frame_idx]
         mask = (mask>150).astype(np.uint8)
@@ -71,11 +71,16 @@ def matting (input_video_path, BW_mask_path,bg_path):
         #inorder to recive a trimap we calculate the erode image as fg
       
 
-        small_fg_mask =cv2.erode(small_mask,kernel=kernel,iterations=constants.ERODE_N_ITER)#cv2.morphologyEx(small_mask,cv2.cv2.MORPH_OPEN, kernel=kernel,iterations=constants.ERODE_N_ITER)
-       
+        #small_fg_mask =cv2.erode(small_mask,kernel=kernel,iterations=constants.ERODE_N_ITER)#cv2.morphologyEx(small_mask,cv2.cv2.MORPH_OPEN, kernel=kernel,iterations=constants.ERODE_N_ITER)
+        fg_mask =cv2.erode(mask,kernel=kernel,iterations=constants.ERODE_N_ITER)#cv2.morphologyEx(small_mask,cv2.cv2.MORPH_OPEN, kernel=kernel,iterations=constants.ERODE_N_ITER)
+        small_fg_mask = fg_mask[mask_top_idx:mask_bottom_idx,mask_left_idx:mask_right_idx]
+
+        bg_mask =cv2.dilate(mask, kernel=kernel,iterations=constants.DIAL_N_ITER)
+        bg_mask = 1-bg_mask
+        small_bg_mask = bg_mask[mask_top_idx:mask_bottom_idx,mask_left_idx:mask_right_idx]
         #temp_mask =small_mask.copy()
-        temp_mask =cv2.dilate(small_mask, kernel=kernel,iterations=constants.DIAL_N_ITER)
-        small_bg_mask = 1-temp_mask
+        #temp_mask =cv2.dilate(small_mask, kernel=kernel,iterations=constants.DIAL_N_ITER)
+        #small_bg_mask = 1-temp_mask
         
         #small_bg_mask = bg_mask[mask_top_idx:mask_bottom_idx,mask_left_idx:mask_right_idx]
         #for more documantation GoTo: https://github.com/taigw/GeodisTK/blob/master/demo2d.py
@@ -87,14 +92,17 @@ def matting (input_video_path, BW_mask_path,bg_path):
         #NOW WE WANT TO BUILD THE KDE FOR THE BG AND FG TO CALC THE PRIOR FOR ALPHA
         idx =  np.where(small_luma_frame >-1)
         grid = np.linspace(0,1900,1901)
-        fg_idx = utilis.choose_randome_indecis(small_fg_mask,450)
-        bg_idx = utilis.choose_randome_indecis(small_bg_mask,450)
+        fg_idx = utilis.choose_randome_indecis(small_fg_mask,1450)
+        bg_idx = utilis.choose_randome_indecis(small_bg_mask,1450)
         fg_pdf = utilis.matting_estimate_pdf_test(dataset_valus=small_luma_frame,bw_method=constants.BW_MATTING,idx= fg_idx ,grid=grid)
         bg_pdf = utilis.matting_estimate_pdf_test(dataset_valus=small_luma_frame,bw_method=constants.BW_MATTING,idx= bg_idx,grid=grid )
+        ### HERE IS SOMTING NEW TO TEST
+        fg_pdf[fg_pdf==0]=EPSILON
+        bg_pdf[bg_pdf==0]= EPSILON
         denominator = np.add(fg_pdf,bg_pdf)
 
-        fg_pdf = fg_pdf/denominator
-        bg_pdf = bg_pdf/denominator
+        fg_pdf = (fg_pdf)/(denominator)
+        bg_pdf = (bg_pdf)/(denominator)
 
         PB = bg_pdf[small_luma_frame]
         PF = fg_pdf[small_luma_frame]
@@ -104,8 +112,8 @@ def matting (input_video_path, BW_mask_path,bg_path):
 
    
         
-        small_fg_probs_for_dist =cv2.normalize(src=PF, dst=None, alpha=0, beta=1, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_8U) #np.rint(255*small_bg_probs/(np.max(small_bg_probs) - np.min(small_bg_probs)),dtype= uint8)
-        small_bg_probs_for_dist =cv2.normalize(src=PB, dst=None, alpha=0, beta=1, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_8U)
+        small_fg_probs_for_dist =cv2.normalize(src=PF, dst=None, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_8U) #np.rint(255*small_bg_probs/(np.max(small_bg_probs) - np.min(small_bg_probs)),dtype= uint8)
+        small_bg_probs_for_dist =cv2.normalize(src=PB, dst=None, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_8U)
 
        
 
@@ -150,9 +158,13 @@ def matting (input_video_path, BW_mask_path,bg_path):
 
         #$$$$$$$% HERE TEST
         ## WE ADDED THE EPSILON TO AVIOD ZERO DIV
-        small_fg_dist_map_norm = (EPSILON+small_fg_dist_map)/(EPSILON+small_fg_dist_map+small_bg_dist_map)
-        small_bg_dist_map_norm = 1-small_fg_dist_map_norm
+        small_bg_dist_map[small_bg_dist_map==0]=EPSILON
+        small_fg_dist_map[small_fg_dist_map==0]=EPSILON
+
+        small_bg_dist_map_norm = (small_bg_dist_map)/(small_fg_dist_map+small_bg_dist_map).astype(np.float64)
+        small_fg_dist_map_norm = (small_fg_dist_map)/(small_fg_dist_map+small_bg_dist_map).astype(np.float64) #1.0-small_fg_dist_map#small_fg_dist_map_norm
         
+        temp = np.abs(small_bg_dist_map_norm-small_fg_dist_map_norm)
         small_trimap_dist_map = (np.abs(small_bg_dist_map_norm-small_fg_dist_map_norm)<constants.EPSILON_SMALL_BAND)
         small_trimap_dist_map_idx = np.where(small_trimap_dist_map==1)
 
@@ -167,13 +179,13 @@ def matting (input_video_path, BW_mask_path,bg_path):
         
 
         #NOW we want to find Alpha
-        w_fg =PF[small_trimap_dist_map_idx]/ (EPSILON+np.power(small_fg_dist_map_norm[small_trimap_dist_map_idx],constants.R))
-        w_bg = PB[small_trimap_dist_map_idx] /(EPSILON+np.power(small_bg_dist_map_norm[small_trimap_dist_map_idx],constants.R))
+        w_fg =(EPSILON+PF[small_trimap_dist_map_idx])/ (EPSILON+np.power(small_fg_dist_map_norm[small_trimap_dist_map_idx],constants.R))
+        w_bg = (EPSILON+PB[small_trimap_dist_map_idx]) /(EPSILON+np.power(small_bg_dist_map_norm[small_trimap_dist_map_idx],constants.R))
         #w_bg=(w_bg/(np.max(w_bg)-np.min(w_bg)))
         if np.min(w_bg) == np.inf:
             alpha= w_fg
         else:
-             alpha = w_fg/(w_fg+w_bg+EPSILON)
+             alpha = w_fg/(w_fg+w_bg)
         #w_bg=(w_bg/(np.max(w_bg)-np.min(w_bg)))*1.0 #np.interp(w_bg, (w_bg.min(), w_bg.max()), (0, 1.0))
        
         temp= np.max(alpha)
