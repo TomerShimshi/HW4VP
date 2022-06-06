@@ -37,11 +37,12 @@ def tracking (input_video_path, Alpha_mask_path):
         mask = (mask>150).astype(np.uint8)
         mas_idx = np.where(mask==1)
         json_lst=[]
-        #close a small rectangle over the binary image
         
+        #First we compute the mean of the mask for the end json
         y_mean,x_mean = (np.mean(mas_idx[0]).astype(int),np.mean(mas_idx[1]).astype(int))
         json_lst.append(int(x_mean))
         json_lst.append(int(y_mean))
+        #close a small rectangle over the alpha image
         mask_x_axis = np.where(mask ==1)[1]
         mask_left_idx =np.min(mask_x_axis)
         mask_right_idx = np.max(mask_x_axis)
@@ -51,7 +52,7 @@ def tracking (input_video_path, Alpha_mask_path):
         json_lst.append(int(mask_bottom_idx-mask_top_idx))
         json_lst.append(int(mask_right_idx-mask_left_idx))
 
-        #add small offset to look at a larger image
+        
 
         mask_left_idx= max(0,mask_left_idx)
         mask_right_idx = min(w,mask_right_idx)
