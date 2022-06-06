@@ -81,8 +81,8 @@ def background_subtraction(input_video_path):
 
         #$$$$$%% UPPER PART
         upper_mask= person_and_blue_mask.copy()
-        upper_mask = cv2.morphologyEx(upper_mask,cv2.MORPH_CLOSE,kernel=kernel,iterations=1).astype(np.uint8)
-        upper_mask = cv2.morphologyEx(upper_mask,cv2.MORPH_CLOSE,kernel=np.ones((20, 1)),iterations=1).astype(np.uint8)
+        upper_mask[:constants.FACE_HIGHT, :] = cv2.morphologyEx(upper_mask[:constants.FACE_HIGHT, :],cv2.MORPH_CLOSE,kernel=kernel,iterations=5).astype(np.uint8)
+        #upper_mask[:constants.FACE_HIGHT, :] = cv2.morphologyEx(upper_mask[:constants.FACE_HIGHT, :],cv2.MORPH_CLOSE,kernel=np.ones((20, 1)),iterations=1).astype(np.uint8)
         '''
         we give a diffrent number than zero in order to
         niglact this pixwls while calculating the KDE

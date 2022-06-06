@@ -27,7 +27,7 @@ start_all = time.time()
 #print('time to finshe stabalize took {} minutes'.format(time_to_stable_in_min))
 
 #background_subtraction.background_subtraction('Outputs\stabilized_{}_{}.avi'.format(ID1,ID2))
-new_bg_sub.background_subtraction('Outputs\stabilized_{}_{}.avi'.format(ID1,ID2))
+#new_bg_sub.background_subtraction('Outputs\stabilized_{}_{}.avi'.format(ID1,ID2))
 end_bg = time.time()
 
 time_to_bg_in_min= np.round((end_bg- start_all)/60)
