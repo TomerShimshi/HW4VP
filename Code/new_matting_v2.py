@@ -56,78 +56,44 @@ def matting (input_video_path, BW_mask_path,bg_path):
 
         #add small offset to look at a larger image
 
-        mask_left_idx= max(0,mask_left_idx-OFFSET//2)
-        mask_right_idx = min(w,mask_right_idx+OFFSET//2)
-        mask_bottom_idx = min(h,mask_bottom_idx + OFFSET//2)
+        mask_left_idx= max(0,mask_left_idx-OFFSET//3)
+        mask_right_idx = min(w,mask_right_idx+OFFSET//3)
+        mask_bottom_idx = min(h,mask_bottom_idx + OFFSET//3)
+        #INCREASE MOSTTLY AROUD THE HEAD EREA
         mask_top_idx = max(0,mask_top_idx-OFFSET)
         
-        #resize the image to look just at a small window aroud the person
-        #mask_idx = np.where(mask==1)
-        #y_mean,x_mean = (np.mean(mask_idx[0]).astype(int),np.mean(mask_idx[1]).astype(int))
-        
+        #resize the image to look just at a small window aroud the person        
         small_luma_frame = luma_frame[mask_top_idx:mask_bottom_idx,mask_left_idx:mask_right_idx]
         small_bgr_frame = frame[mask_top_idx:mask_bottom_idx,mask_left_idx:mask_right_idx]
         small_mask = mask[mask_top_idx:mask_bottom_idx,mask_left_idx:mask_right_idx]
         small_new_bg = new_bg[mask_top_idx:mask_bottom_idx,mask_left_idx:mask_right_idx]
         small_blue_frame = blue_fram[mask_top_idx:mask_bottom_idx,mask_left_idx:mask_right_idx]
-        '''
-        small_luma_frame = luma_frame[max(0, y_mean - constants.WINDOW_H  // 2):min(h, y_mean + constants.WINDOW_H // 2),
-                                     max(0, x_mean - constants.WINDOW_W // 2):min(w, x_mean + constants.WINDOW_W // 2)]
-        small_bgr_frame = frame[max(0, y_mean - constants.WINDOW_H  // 2):min(h, y_mean + constants.WINDOW_H // 2),
-                                     max(0, x_mean - constants.WINDOW_W // 2):min(w, x_mean + constants.WINDOW_W // 2)]
-        small_mask = mask[max(0, y_mean - constants.WINDOW_H  // 2):min(h, y_mean + constants.WINDOW_H // 2),
-                                     max(0, x_mean - constants.WINDOW_W // 2):min(w, x_mean + constants.WINDOW_W // 2)]
-        small_new_bg = new_bg[max(0, y_mean - constants.WINDOW_H  // 2):min(h, y_mean + constants.WINDOW_H // 2),
-                             max(0, x_mean - constants.WINDOW_W // 2):min(w, x_mean + constants.WINDOW_W // 2)]
-        '''
+        
 
         #inorder to recive a trimap we calculate the erode image as fg
-        '''
-        now we try somthing new
-
         
-
-        small_mask_idx = np.where(small_mask == 1)
-        shuff = mask[max(0, y_mean - 2*(constants.SMALL_WINDOW_H//3)  ):min(h, y_mean +constants.SMALL_WINDOW_H//3 ),
-                        max(0, x_mean - constants.SMALL_WINDOW_W // 2):min(w, x_mean + constants.SMALL_WINDOW_W // 2) ]
-        small_fg_mask = np.zeros(mask.shape).astype(np.uint8)
-        #small_fg_mask = cv2.erode(small_mask,kernel=np.ones((7,7)),iterations=constants.ERODE_N_ITER)
-        small_fg_mask [max(0, y_mean - 2*(constants.SMALL_WINDOW_H//3)  ):min(h, y_mean +constants.SMALL_WINDOW_H//3 ),
-                        max(0, x_mean - constants.SMALL_WINDOW_W // 2):min(w, x_mean + constants.SMALL_WINDOW_W // 2) ]= shuff #shuff [max(0, y_mean - constants.SMALL_WINDOW_H  // 2):min(h, y_mean + constants.SMALL_WINDOW_H // 2),
-                                                                                                                           #max(0, x_mean - constants.SMALL_WINDOW_W // 2):min(w, x_mean + constants.SMALL_WINDOW_W // 2) ]
-        
-        small_fg_mask =small_fg_mask[max(0, y_mean - constants.WINDOW_H  // 2):min(h, y_mean + constants.WINDOW_H // 2),
-                                     max(0, x_mean - constants.WINDOW_W // 2):min(w, x_mean + constants.WINDOW_W // 2)] 
-        temp2 = np.max(small_fg_mask)
-        if temp2 == 0:
-            t=1
-        '''
 
         fg_mask =cv2.erode(mask,kernel=kernel,iterations=constants.ERODE_N_ITER)#cv2.morphologyEx(small_mask,cv2.cv2.MORPH_OPEN, kernel=kernel,iterations=constants.ERODE_N_ITER)
         small_fg_mask = fg_mask[mask_top_idx:mask_bottom_idx,mask_left_idx:mask_right_idx]
-        #cv2.erode(small_mask,kernel=np.ones((7,7)),iterations=constants.ERODE_N_ITER)
-       
-        #small_fg_mask = fg_mask[mask_top_idx:mask_bottom_idx,mask_left_idx:mask_right_idx]
+        
+        #WE FIRST CALCULATE THE DIST MAP WITH THE SMALL FG MASK INSTED OF THE PROB MAP
+        #WE TRIED ALEX METHOD AND ADDED THE CODE TO THE REPORT BUT WE GOT BAD RESULTS
         #for more documantation GoTo: https://github.com/taigw/GeodisTK/blob/master/demo2d.py
         small_fg_dist_map = GeodisTK.geodesic2d_raster_scan(small_luma_frame,small_fg_mask,1.0,constants.GEO_N_ITER)
 
-        #inorder to recive a trimap we calculate the dialate image as bg the trimap
-        #will be the diff between them
-
-        #small_bg_mask = cv2.dilate(small_mask,kernel=np.ones((3,3)),iterations=constants.DIAL_N_ITER)
-        
+        #WE USE 1-THE DIALATE MASK IN ORDER TO LOOK AT THE BG
         bg_mask =cv2.dilate(mask, kernel=kernel,iterations=constants.DIAL_N_ITER)
         #try to solve the vanishing head problem
         bg_mask[:constants.FACE_HIGHT, :] =cv2.dilate(bg_mask[:constants.FACE_HIGHT, :], kernel=kernel,iterations=constants.DIAL_N_ITER)
         bg_mask = 1-bg_mask
         small_bg_mask = bg_mask[mask_top_idx:mask_bottom_idx,mask_left_idx:mask_right_idx]
-        #small_bg_mask = bg_mask[mask_top_idx:mask_bottom_idx,mask_left_idx:mask_right_idx]
+       
         #for more documantation GoTo: https://github.com/taigw/GeodisTK/blob/master/demo2d.py
         small_bg_dist_map = GeodisTK.geodesic2d_raster_scan(small_luma_frame,small_bg_mask,1.0,constants.GEO_N_ITER)
 
         ### WE ADD EPSILON TO AVIOD ZERO DIV
-        small_bg_dist_map[small_bg_dist_map==0]=EPSILON
-        small_fg_dist_map[small_fg_dist_map==0]=EPSILON
+        small_bg_dist_map[small_bg_dist_map==0]=constants.EPSILON
+        small_fg_dist_map[small_fg_dist_map==0]=constants.EPSILON
         #now we build the trimap zone
 
         small_fg_dist_map = small_fg_dist_map/(small_fg_dist_map+small_bg_dist_map)
@@ -150,18 +116,16 @@ def matting (input_video_path, BW_mask_path,bg_path):
         grid = np.linspace(0,2900,2901)
         fg_pdf = utilis.matting_estimate_pdf_test(dataset_valus=small_blue_frame,bw_method=constants.BW_MATTING,idx= fg_idx ,grid=grid)
         bg_pdf = utilis.matting_estimate_pdf_test(dataset_valus=small_blue_frame,bw_method=constants.BW_MATTING,idx= bg_idx,grid=grid )
-        ### HERE IS SOMTING NEW TO TEST
+        ### WE ADD EPSILON TO AVIOD ZERO DIV
         fg_pdf[fg_pdf==0]=EPSILON
         bg_pdf[bg_pdf==0]= EPSILON
         denominator = np.add(fg_pdf,bg_pdf)
-
+        #WE DIVIDE THE pdf's IN ORDER TO NORMALIZE THEMe
         fg_pdf = (fg_pdf)/(denominator)
         bg_pdf = (bg_pdf)/(denominator)
         
 
-        #fg_pdf = (fg_pdf+EPSILON)/(denominator +EPSILON)
-        #bg_pdf = (bg_pdf+EPSILON)/(denominator +EPSILON)
-
+        #NOW WE CALCULATE THE THE PROBS FOR THE BG AND FG
         PB = bg_pdf[small_blue_frame]
         PF = fg_pdf[small_blue_frame]
 
@@ -171,33 +135,24 @@ def matting (input_video_path, BW_mask_path,bg_path):
         alpha = w_fg/(w_fg+w_bg)
 
         #$$$$$%%%%%test$$$$$%%%%%%%%
-        alpha = (alpha/(alpha.max()))*1.0
-        #alpha = cv2.morphologyEx(alpha,cv2.MORPH_OPEN,kernel=kernel,iterations=1)
-        
-        #small_fg_mask_test =cv2.morphologyEx(small_mask,cv2.cv2.MORPH_OPEN, kernel=np.ones((11,11)),iterations=constants.ERODE_N_ITER) #cv2.erode(small_mask,kernel=np.ones((11,11)),iterations=constants.ERODE_N_ITER)
-        #small_alpha = np.copy(small_fg_mask).astype(np.float)
+        #alpha = (alpha/(alpha.max()))*1.0
+       
         small_alpha = np.copy(small_accepted_fg_mask).astype(np.float)#np.copy(small_fg_mask).astype(np.float)
         small_alpha[small_trimap_dist_map_idx]= alpha #np.maximum(alpha,small_accepted_fg_mask[small_trimap_dist_map_idx])
-        #small_alpha =cv2.morphologyEx(small_alpha,cv2.MORPH_CLOSE, kernel=kernel,iterations=1)
-        #small_alpha[:constants.FACE_HIGHT, :] = cv2.morphologyEx(small_alpha[:constants.FACE_HIGHT, :],cv2.MORPH_CLOSE,kernel=kernel,iterations=1)
-
+        
         
         #now we implement the alpha 
-        #small_mated_frame = small_bgr_frame*small_alpha[:, :, np.newaxis]+small_new_bg*(1-small_alpha[:, :, np.newaxis])  #cv2.addWeighted(small_bgr_frame,small_alpha,small_new_bg,1-small_alpha,gamma=0)
+        
         small_mated_frame = utilis.use_mask_on_frame(frame=small_bgr_frame,mask=small_alpha) + utilis.use_mask_on_frame(frame=small_new_bg,mask=1-small_alpha)  #small_bgr_frame*small_alpha[:, :, np.newaxis]+small_new_bg*(1-small_alpha[:, :, np.newaxis])
         #resize to original frame size
 
         matted_frame = np.copy(new_bg)
-        '''
-        matted_frame[max(0, y_mean - constants.WINDOW_H  // 2):min(h, y_mean + constants.WINDOW_H // 2),
-                     max(0, x_mean - constants.WINDOW_W // 2):min(w, x_mean + constants.WINDOW_W // 2)] = small_mated_frame
-        '''
+       
         matted_frame[mask_top_idx:mask_bottom_idx,mask_left_idx:mask_right_idx] = small_mated_frame
         matted_frames_list.append(matted_frame)  
 
         alpha_frame = np.zeros(mask.shape) 
-        #alpha_frame[max(0, y_mean - constants.WINDOW_H  // 2):min(h, y_mean + constants.WINDOW_H // 2),
-        #             max(0, x_mean - constants.WINDOW_W // 2):min(w, x_mean + constants.WINDOW_W // 2)]  = small_alpha
+       
         alpha_frame[mask_top_idx:mask_bottom_idx,mask_left_idx:mask_right_idx] = small_alpha
         alpha_frame= (alpha_frame*255).astype(np.uint8)
         alpha_frame_list.append(alpha_frame)   
