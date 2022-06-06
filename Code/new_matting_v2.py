@@ -45,7 +45,7 @@ def matting (input_video_path, BW_mask_path,bg_path):
 
         #close a small rectangle over the binary image
         
-        OFFSET = 105
+        OFFSET = 120
 
         mask_x_axis = np.where(mask ==1)[1]
         mask_left_idx =np.min(mask_x_axis)
@@ -56,9 +56,9 @@ def matting (input_video_path, BW_mask_path,bg_path):
 
         #add small offset to look at a larger image
 
-        mask_left_idx= max(0,mask_left_idx-OFFSET)
-        mask_right_idx = min(w,mask_right_idx+OFFSET)
-        mask_bottom_idx = min(h,mask_bottom_idx + OFFSET)
+        mask_left_idx= max(0,mask_left_idx-OFFSET//2)
+        mask_right_idx = min(w,mask_right_idx+OFFSET//2)
+        mask_bottom_idx = min(h,mask_bottom_idx + OFFSET//2)
         mask_top_idx = max(0,mask_top_idx-OFFSET)
         
         #resize the image to look just at a small window aroud the person
@@ -117,6 +117,8 @@ def matting (input_video_path, BW_mask_path,bg_path):
         #small_bg_mask = cv2.dilate(small_mask,kernel=np.ones((3,3)),iterations=constants.DIAL_N_ITER)
         
         bg_mask =cv2.dilate(mask, kernel=kernel,iterations=constants.DIAL_N_ITER)
+        #try to solve the vanishing head problem
+        bg_mask[:constants.FACE_HIGHT, :] =cv2.dilate(bg_mask[:constants.FACE_HIGHT, :], kernel=kernel,iterations=constants.DIAL_N_ITER)
         bg_mask = 1-bg_mask
         small_bg_mask = bg_mask[mask_top_idx:mask_bottom_idx,mask_left_idx:mask_right_idx]
         #small_bg_mask = bg_mask[mask_top_idx:mask_bottom_idx,mask_left_idx:mask_right_idx]
