@@ -177,7 +177,7 @@ def matting (input_video_path, BW_mask_path,bg_path):
         small_alpha = np.copy(small_accepted_fg_mask).astype(np.float)#np.copy(small_fg_mask).astype(np.float)
         small_alpha[small_trimap_dist_map_idx]= alpha #np.maximum(alpha,small_accepted_fg_mask[small_trimap_dist_map_idx])
         #small_alpha =cv2.morphologyEx(small_alpha,cv2.MORPH_CLOSE, kernel=kernel,iterations=1)
-        small_alpha[:constants.FACE_HIGHT, :] = cv2.morphologyEx(small_alpha[:constants.FACE_HIGHT, :],cv2.MORPH_CLOSE,kernel=kernel,iterations=1)
+        #small_alpha[:constants.FACE_HIGHT, :] = cv2.morphologyEx(small_alpha[:constants.FACE_HIGHT, :],cv2.MORPH_CLOSE,kernel=kernel,iterations=1)
 
         
         #now we implement the alpha 
