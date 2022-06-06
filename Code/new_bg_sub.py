@@ -30,7 +30,7 @@ def background_subtraction(input_video_path):
     n_frames = len(frames_bgr)
     #create the backround subtractor
     num_iter = 10
-    fgbg = cv2.createBackgroundSubtractorKNN(history=int(num_iter)*n_frames,detectShadows=False,dist2Threshold =38)#30)#45)#90.0)
+    fgbg = cv2.createBackgroundSubtractorKNN(history=int(num_iter)*n_frames,detectShadows=False,dist2Threshold =40)#30)#45)#90.0)
     mask_list = np.zeros((n_frames,parameters["height"],parameters['width']))
    
     print('started studing frames history')
@@ -38,8 +38,8 @@ def background_subtraction(input_video_path):
     #FIRST WE STUDY THE HISTORY BY REPEATING THE VIDEO 
     for i in range(num_iter):
         for frame_idx, frame in enumerate(frames_bgr):#(frames_gray[:]):
-            _,green_frame,_ = cv2.split(frame)
-            fg_mask = fgbg.apply(green_frame)
+            _,_,red_frame = cv2.split(frame)
+            fg_mask = fgbg.apply(red_frame)
             
 
             fg_mask = (fg_mask>200).astype(np.uint8)
@@ -167,7 +167,7 @@ def background_subtraction(input_video_path):
         if frame_idx <50:
             small_probs_fg_bigger_bg_mask_upper[small_person_and_blue_mask_upper_idx]=(small_fg_bigger_bg_mask_upper>0.55).astype(np.uint8) # used to ne 67
         else:
-            small_probs_fg_bigger_bg_mask_upper[small_person_and_blue_mask_upper_idx]=(small_fg_bigger_bg_mask_upper>0.99).astype(np.uint8) #used to 97
+            small_probs_fg_bigger_bg_mask_upper[small_person_and_blue_mask_upper_idx]=(small_fg_bigger_bg_mask_upper>0.98).astype(np.uint8) #used to 97
 
         #### now for the middle
         
@@ -186,7 +186,7 @@ def background_subtraction(input_video_path):
         if frame_idx<50:
             small_probs_fg_bigger_bg_mask_middle[small_person_and_blue_mask_middle_idx]=(small_probs_fg_bigger_bg_middle>0.5).astype(np.uint8)
         else:
-            small_probs_fg_bigger_bg_mask_middle[small_person_and_blue_mask_middle_idx]=(small_probs_fg_bigger_bg_middle>0.75).astype(np.uint8)
+            small_probs_fg_bigger_bg_mask_middle[small_person_and_blue_mask_middle_idx]=(small_probs_fg_bigger_bg_middle>0.8).astype(np.uint8)
         #### from here its the lower
 
         lower_mask= small_person_and_blue_mask.copy()
@@ -247,12 +247,12 @@ def background_subtraction(input_video_path):
         final_contour_mask = np.zeros(final_mask.shape)
         #WE ASSUME THAT THE BIGGEST CONTOUR IS THE PERSON
         cv2.drawContours(final_contour_mask, [max(contours, key = cv2.contourArea)], -1, color=(1, 1, 1), thickness=cv2.FILLED)
-        
+        temp =np.count_nonzero(final_mask)
         final_mask =np.minimum(final_contour_mask,final_mask) #(final_contour_mask * final_mask).astype(np.uint8)
         #final_mask [final_contour_mask == 0] = 0#(final_contour_mask * final_mask).astype(np.uint8)
-        temp_2 = utilis.scale_fig_0_to_255(final_mask)
+        temp =np.count_nonzero(final_mask)
         final_masks_list.append(utilis.scale_fig_0_to_255(final_mask))
-        temp =np.max( utilis.use_mask_on_frame(frame=frame,mask=final_mask))
+       
         final_frames_list.append(utilis.use_mask_on_frame(frame=frame,mask=final_mask))
         pbar.update(1)
 
