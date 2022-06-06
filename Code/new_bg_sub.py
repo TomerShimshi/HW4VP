@@ -23,21 +23,22 @@ def background_subtraction(input_video_path):
     parameters = utilis.get_video_parameters(cap)
     h,w = parameters["height"],parameters['width']
     #load the frames
+    
     frames_bgr =  utilis.load_video(cap,wanted_colors='bgr')
     frames_gray = utilis.color_to_gray(frames_bgr)
     
     n_frames = len(frames_bgr)
     #create the backround subtractor
     num_iter = 10
-    fgbg = cv2.createBackgroundSubtractorKNN(history=num_iter*n_frames,detectShadows=False,dist2Threshold =30)#45)#90.0)
+    fgbg = cv2.createBackgroundSubtractorKNN(history=int(num_iter)*n_frames,detectShadows=False,dist2Threshold =30)#45)#90.0)
     mask_list = np.zeros((n_frames,parameters["height"],parameters['width']))
    
     print('started studing frames history')
     pbar = tqdm.tqdm(total=num_iter*n_frames)
     for i in range(num_iter):
-        for frame_idx, frame in enumerate(frames_gray[:]):
-            #frame_hsv= frame[:,:,1:]
-            fg_mask = fgbg.apply(frame)
+        for frame_idx, frame in enumerate(frames_bgr):#(frames_gray[:]):
+            blue_fram,_,_ = cv2.split(frame)
+            fg_mask = fgbg.apply(blue_fram)
             #if i == num_iter-1:
             #    kernel =cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(5,5))
             #    #fg_mask[constants.SHOES_HIGHT:,:] = cv2.erode(fg_mask,kernel,iterations =1)
