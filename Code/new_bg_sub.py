@@ -30,7 +30,7 @@ def background_subtraction(input_video_path):
     n_frames = len(frames_bgr)
     #create the backround subtractor
     num_iter = 10
-    fgbg = cv2.createBackgroundSubtractorKNN(history=int(num_iter)*n_frames,detectShadows=False,dist2Threshold =30)#45)#90.0)
+    fgbg = cv2.createBackgroundSubtractorKNN(history=int(num_iter)*n_frames,detectShadows=False,dist2Threshold =40)#45)#90.0)
     mask_list = np.zeros((n_frames,parameters["height"],parameters['width']))
    
     print('started studing frames history')
@@ -186,7 +186,7 @@ def background_subtraction(input_video_path):
         if frame_idx<50:
             small_probs_fg_bigger_bg_mask_middle[small_person_and_blue_mask_middle_idx]=(small_probs_fg_bigger_bg_middle>0.5).astype(np.uint8)
         else:
-            small_probs_fg_bigger_bg_mask_middle[small_person_and_blue_mask_middle_idx]=(small_probs_fg_bigger_bg_middle>0.75).astype(np.uint8)
+            small_probs_fg_bigger_bg_mask_middle[small_person_and_blue_mask_middle_idx]=(small_probs_fg_bigger_bg_middle>0.6).astype(np.uint8)
         #### from here its the lower
 
         lower_mask= small_person_and_blue_mask.copy()
