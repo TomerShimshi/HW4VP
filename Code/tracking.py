@@ -24,7 +24,7 @@ def tracking (input_video_path, Alpha_mask_path):
     frames_bgr =  utilis.load_video(cap,wanted_colors='bgr')
     frames_mask = utilis.load_video(cap_mask,wanted_colors='gray')
     
-    
+    mask_top_idx_max =np.inf
     n_frames = len(frames_bgr)
     tracked_frames_list= []
     tracik_dic={}
@@ -49,8 +49,8 @@ def tracking (input_video_path, Alpha_mask_path):
         mask_y_axis = np.where(mask ==1)[0]
         mask_top_idx = np.min(mask_y_axis)
         mask_bottom_idx = np.max(mask_y_axis)
-        json_lst.append(int(mask_bottom_idx-mask_top_idx))
-        json_lst.append(int(mask_right_idx-mask_left_idx))
+        
+        
 
         
 
@@ -58,6 +58,14 @@ def tracking (input_video_path, Alpha_mask_path):
         mask_right_idx = min(w,mask_right_idx)
         mask_bottom_idx = min(h,mask_bottom_idx )
         mask_top_idx = max(0,mask_top_idx)
+
+        if mask_top_idx<mask_top_idx_max:
+            mask_top_idx_max=mask_top_idx
+        else:
+            mask_top_idx=mask_top_idx_max
+
+        json_lst.append(int(mask_bottom_idx-mask_top_idx))
+        json_lst.append(int(mask_right_idx-mask_left_idx))
 
         start_point = (mask_left_idx,mask_top_idx)
 
