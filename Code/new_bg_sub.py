@@ -30,16 +30,16 @@ def background_subtraction(input_video_path):
     n_frames = len(frames_bgr)
     #create the backround subtractor
     num_iter = 10
-    fgbg = cv2.createBackgroundSubtractorKNN(history=int(num_iter)*n_frames,detectShadows=False,dist2Threshold =40)#30)#45)#90.0)
+    fgbg = cv2.createBackgroundSubtractorKNN(history=int(num_iter)*n_frames,detectShadows=False,dist2Threshold =30)#45)#90.0)
     mask_list = np.zeros((n_frames,parameters["height"],parameters['width']))
    
     print('started studing frames history')
     pbar = tqdm.tqdm(total=num_iter*n_frames)
     #FIRST WE STUDY THE HISTORY BY REPEATING THE VIDEO 
     for i in range(num_iter):
-        for frame_idx, frame in enumerate(frames_bgr):#(frames_gray[:]):
-            _,_,red_frame = cv2.split(frame)
-            fg_mask = fgbg.apply(red_frame)
+        for frame_idx, frame in enumerate(frames_gray[:]):
+           
+            fg_mask = fgbg.apply(frame)
             
 
             fg_mask = (fg_mask>200).astype(np.uint8)
@@ -78,7 +78,7 @@ def background_subtraction(input_video_path):
         #$$$$$%% UPPER PART
         upper_mask= person_and_blue_mask.copy()
         #WE ERODE THE UPPER PART TO AVOID THE VANISHING HEAD PROBLEM
-        upper_mask[:constants.FACE_HIGHT, :] = cv2.morphologyEx(upper_mask[:constants.FACE_HIGHT, :],cv2.MORPH_CLOSE,kernel=kernel,iterations=5).astype(np.uint8)
+        upper_mask[:constants.FACE_HIGHT, :] = cv2.morphologyEx(upper_mask[:constants.FACE_HIGHT, :],cv2.MORPH_CLOSE,kernel=kernel,iterations=4).astype(np.uint8)
         
         '''
         we give a diffrent number than zero in order to
@@ -167,7 +167,7 @@ def background_subtraction(input_video_path):
         if frame_idx <50:
             small_probs_fg_bigger_bg_mask_upper[small_person_and_blue_mask_upper_idx]=(small_fg_bigger_bg_mask_upper>0.55).astype(np.uint8) # used to ne 67
         else:
-            small_probs_fg_bigger_bg_mask_upper[small_person_and_blue_mask_upper_idx]=(small_fg_bigger_bg_mask_upper>0.98).astype(np.uint8) #used to 97
+            small_probs_fg_bigger_bg_mask_upper[small_person_and_blue_mask_upper_idx]=(small_fg_bigger_bg_mask_upper>0.97).astype(np.uint8) #used to 97
 
         #### now for the middle
         
@@ -186,7 +186,7 @@ def background_subtraction(input_video_path):
         if frame_idx<50:
             small_probs_fg_bigger_bg_mask_middle[small_person_and_blue_mask_middle_idx]=(small_probs_fg_bigger_bg_middle>0.5).astype(np.uint8)
         else:
-            small_probs_fg_bigger_bg_mask_middle[small_person_and_blue_mask_middle_idx]=(small_probs_fg_bigger_bg_middle>0.8).astype(np.uint8)
+            small_probs_fg_bigger_bg_mask_middle[small_person_and_blue_mask_middle_idx]=(small_probs_fg_bigger_bg_middle>0.75).astype(np.uint8)
         #### from here its the lower
 
         lower_mask= small_person_and_blue_mask.copy()
@@ -211,15 +211,13 @@ def background_subtraction(input_video_path):
         y_mean_shoes,x_mean_shoes = (np.mean(shoes_idx[0]).astype(int),np.mean(shoes_idx[1]).astype(int))
         if y_mean_shoes>0:
             small_or_mask[y_mean_shoes - y_offset:, :] = cv2.morphologyEx(small_or_mask[y_mean_shoes - y_offset:, :],
-                                                                         cv2.MORPH_CLOSE, kernel=np.ones((1,20)))
+                                                                         cv2.MORPH_CLOSE, kernel=np.ones((1,20)),iterations=2)
             small_or_mask[y_mean_shoes - y_offset:, :] = cv2.morphologyEx(small_or_mask[y_mean_shoes - y_offset:, :],
-                                                                         cv2.MORPH_CLOSE, kernel=np.ones((20,1)))
+                                                                         cv2.MORPH_CLOSE, kernel=np.ones((20,1)),iterations=2)
                 
         #NOW WE TRY TO RESTORE THE HEAD
         kernel =cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(8,8))
-        kernel_close =cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(5,5))
-        small_or_mask[:constants.FACE_HIGHT, :] = cv2.morphologyEx(small_or_mask[:constants.FACE_HIGHT, :],cv2.MORPH_OPEN,kernel=kernel,iterations=1).astype(np.uint8)
-        
+        kernel_close =cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(5,5))        
         small_or_mask[:constants.FACE_HIGHT, :] = cv2.morphologyEx(small_or_mask[:constants.FACE_HIGHT, :],cv2.MORPH_CLOSE,kernel=kernel_close,iterations=2)
         
         #CLOSE ALL THE HOLLS
