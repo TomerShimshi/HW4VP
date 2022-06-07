@@ -97,7 +97,7 @@ def movingAverage(curve, radius):
 def smooth(trajectory,wanted_radius=5):
   smoothed_trajectory = np.copy(trajectory)
   # Filter the x, y and angle curves
-  for i in range(smoothed_trajectory.shape[1]):
+  for i in range(3):
     smoothed_trajectory[:,i] = movingAverage(trajectory[:,i], radius=wanted_radius)
 
   return smoothed_trajectory

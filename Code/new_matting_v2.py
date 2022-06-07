@@ -1,4 +1,4 @@
-import logging
+
 from pickletools import uint8
 import time
 import cv2
@@ -16,7 +16,7 @@ ID1 = 203200480
 ID2 = 320521461
 
 EPSILON = 10**-30
-my_logger = logging.getLogger('MyLogger')
+
 def matting (input_video_path, BW_mask_path,bg_path):
     start = time.time()
    
@@ -101,7 +101,7 @@ def matting (input_video_path, BW_mask_path,bg_path):
         small_trimap_dist_map = (np.abs(small_bg_dist_map-small_fg_dist_map)<constants.EPSILON_SMALL_BAND)
         small_trimap_dist_map_idx = np.where(small_trimap_dist_map==1)
 
-        small_accepted_fg_mask = (small_fg_dist_map<small_bg_dist_map-constants.EPSILON_SMALL_BAND).astype(np.uint8)
+        small_accepted_fg_mask = (small_fg_dist_map<small_bg_dist_map).astype(np.uint8)
         small_accepted_bg_mask = (small_bg_dist_map>=small_fg_dist_map-constants.EPSILON_SMALL_BAND).astype(np.uint8)
         temp = np.count_nonzero(small_accepted_fg_mask)
         if temp<150:

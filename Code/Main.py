@@ -11,6 +11,7 @@ import test
 import new_matting
 import new_matting_v2
 import tracking
+import new_video_stabilize
 
 import json
 
@@ -20,14 +21,14 @@ ID1 = 203200480
 ID2 = 320521461
 start_all = time.time()
 
-#video_stabilize.stabalize_video('Inputs\INPUT.avi','Outputs\stabilized_{}_{}.avi'.format(ID1,ID2))
-#end_stabalize = time.time()
-#
-#time_to_stable_in_min= np.round((end_stabalize- start_all)/60)
-#print('time to finshe stabalize took {} minutes'.format(time_to_stable_in_min))
+new_video_stabilize.stabalize_video('Inputs\INPUT.avi','Outputs\stabilized_{}_{}.avi'.format(ID1,ID2))
+end_stabalize = time.time()
 
-#background_subtraction.background_subtraction('Outputs\stabilized_{}_{}.avi'.format(ID1,ID2))
-#new_bg_sub.background_subtraction('Outputs\stabilized_{}_{}.avi'.format(ID1,ID2))
+time_to_stable_in_min= np.round((end_stabalize- start_all)/60)
+print('time to finshe stabalize took {} minutes'.format(time_to_stable_in_min))
+
+
+new_bg_sub.background_subtraction('Outputs\stabilized_{}_{}.avi'.format(ID1,ID2))
 end_bg = time.time()
 
 time_to_bg_in_min= np.round((end_bg- start_all)/60)
@@ -42,15 +43,14 @@ tracking.tracking('Outputs\matt_{}_{}.avi'.format(ID1,ID2),'Outputs\_alpha_{}_{}
 end_track = time.time()
 time_to_track_in_min= np.round((end_track- start_all)/60)
 print('time to finshe tracking took {} minutes'.format(time_to_track_in_min))
-'''
+
 
 ### NOW FOR THE LOGGING
-#dic.update({'time_to_stabilize':time_to_stable_in_min})
-#dic.update({'time_to_binary':time_to_bg_in_min})
-#dic.update({'time_to_alpha':time_to_mat_in_min})
-#dic.update({'time_to_matted':time_to_mat_in_min})
-#dic.update({'time_to_Output':time_to_mat_in_min})
-#with open("Outputs\Timing.json", "w") as outfile:
-#    json.dump(dic, outfile)
-'''
+dic.update({'time_to_stabilize':time_to_stable_in_min})
+dic.update({'time_to_binary':time_to_bg_in_min})
+dic.update({'time_to_alpha':time_to_mat_in_min})
+dic.update({'time_to_matted':time_to_mat_in_min})
+dic.update({'time_to_Output':time_to_mat_in_min})
+with open("Outputs\Timing.json", "w") as outfile:
+    json.dump(dic, outfile)
 
