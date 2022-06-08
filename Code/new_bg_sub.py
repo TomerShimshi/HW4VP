@@ -247,7 +247,7 @@ def background_subtraction(input_video_path):
         cv2.drawContours(final_contour_mask, [max(contours, key = cv2.contourArea)], -1, color=(1, 1, 1), thickness=cv2.FILLED)
         temp =np.count_nonzero(final_mask)
         final_mask =np.minimum(final_contour_mask,final_mask) #(final_contour_mask * final_mask).astype(np.uint8)
-        #final_mask [final_contour_mask == 0] = 0#(final_contour_mask * final_mask).astype(np.uint8)
+
         temp =np.count_nonzero(final_mask)
         final_masks_list.append(utilis.scale_fig_0_to_255(final_mask))
        
