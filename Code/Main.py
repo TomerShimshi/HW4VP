@@ -28,9 +28,9 @@ start_all = time.time()
 #print('time to finshe stabalize took {} minutes'.format(time_to_stable_in_min))
 #
 #
-new_bg_sub.background_subtraction('Outputs\stabilized_{}_{}.avi'.format(ID1,ID2))
-end_bg = time.time()
-
+#new_bg_sub.background_subtraction('Outputs\stabilized_{}_{}.avi'.format(ID1,ID2))
+#end_bg = time.time()
+#
 #time_to_bg_in_min= np.round((end_bg- start_all)/60)
 #print('time to finshe bg sub took {} minutes'.format(time_to_bg_in_min))
 
@@ -39,13 +39,13 @@ end_mat = time.time()
 time_to_mat_in_min= np.round((end_mat- start_all)/60)
 print('time to finshe matting took {} minutes'.format(time_to_mat_in_min))
 
-tracking.tracking('Outputs\matt_{}_{}.avi'.format(ID1,ID2),'Outputs\_alpha_{}_{}.avi'.format(ID1,ID2))
-end_track = time.time()
-time_to_track_in_min= np.round((end_track- start_all)/60)
-print('time to finshe tracking took {} minutes'.format(time_to_track_in_min))
-
-
-### NOW FOR THE LOGGING
+#tracking.tracking('Outputs\matt_{}_{}.avi'.format(ID1,ID2),'Outputs\_alpha_{}_{}.avi'.format(ID1,ID2))
+#end_track = time.time()
+#time_to_track_in_min= np.round((end_track- start_all)/60)
+#print('time to finshe tracking took {} minutes'.format(time_to_track_in_min))
+#
+#
+#### NOW FOR THE LOGGING
 #dic.update({'time_to_stabilize':time_to_stable_in_min})
 #dic.update({'time_to_binary':time_to_bg_in_min})
 #dic.update({'time_to_alpha':time_to_mat_in_min})

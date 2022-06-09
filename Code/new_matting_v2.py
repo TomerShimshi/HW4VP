@@ -102,13 +102,8 @@ def matting (input_video_path, BW_mask_path,bg_path):
         small_trimap_dist_map_idx = np.where(small_trimap_dist_map==1)
 
         small_accepted_fg_mask = (small_fg_dist_map<small_bg_dist_map).astype(np.uint8)
-        small_accepted_bg_mask = (small_bg_dist_map>=small_fg_dist_map-constants.EPSILON_SMALL_BAND).astype(np.uint8)
-        temp = np.count_nonzero(small_accepted_fg_mask)
-        if temp<150:
-            t=1
-        temp = np.count_nonzero(small_accepted_bg_mask)
-        if temp<150:
-            t=1
+        small_accepted_bg_mask = (small_bg_dist_map>=small_fg_dist_map).astype(np.uint8)
+      
         #NOW WE WANT TO BUILD THE KDE FOR THE BG AND FG TO CALC THE PRIOR FOR ALPHA
 
         fg_idx = utilis.choose_randome_indecis(small_accepted_fg_mask,1520)
@@ -137,7 +132,7 @@ def matting (input_video_path, BW_mask_path,bg_path):
         #$$$$$%%%%%test$$$$$%%%%%%%%
         #alpha = (alpha/(alpha.max()))*1.0
        
-        small_alpha = np.copy(small_accepted_fg_mask).astype(np.float)#np.copy(small_fg_mask).astype(np.float)
+        small_alpha =np.copy(small_accepted_fg_mask).astype(np.float)#np.copy(small_fg_mask).astype(np.float)
         small_alpha[small_trimap_dist_map_idx]= alpha #np.maximum(alpha,small_accepted_fg_mask[small_trimap_dist_map_idx])
         
         
