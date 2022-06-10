@@ -64,7 +64,7 @@ def matting (input_video_path, BW_mask_path,bg_path):
         
         #resize the image to look just at a small window aroud the person        
         small_luma_frame = luma_frame[mask_top_idx:mask_bottom_idx,mask_left_idx:mask_right_idx]
-        #small_luma_frame = np.float32(small_luma_frame)
+        small_luma_frame = np.float32(small_luma_frame)
         small_bgr_frame = frame[mask_top_idx:mask_bottom_idx,mask_left_idx:mask_right_idx]
         small_mask = mask[mask_top_idx:mask_bottom_idx,mask_left_idx:mask_right_idx]
         small_new_bg = new_bg[mask_top_idx:mask_bottom_idx,mask_left_idx:mask_right_idx]
@@ -167,9 +167,9 @@ def matting (input_video_path, BW_mask_path,bg_path):
         
         
     
-    utilis.write_video('Outputs\matt_{}_{}.avi'.format(ID1,ID2),parameters=parameters,frames=matted_frames_list,isColor=True)
+    utilis.write_video('Outputs/matted_{}_{}.avi'.format(ID1,ID2),parameters=parameters,frames=matted_frames_list,isColor=True)
 
-    utilis.write_video('Outputs\_alpha_{}_{}.avi'.format(ID1,ID2),parameters=parameters,frames=alpha_frame_list,isColor=True)
+    utilis.write_video('Outputs/alpha_{}_{}.avi'.format(ID1,ID2),parameters=parameters,frames=alpha_frame_list,isColor=True)
     end = time.time()
     print('matting took {}'.format(end-start))
 

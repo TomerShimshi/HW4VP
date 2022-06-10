@@ -258,8 +258,8 @@ def background_subtraction(input_video_path):
         
         
 
-    utilis.write_video('Outputs\extracted_{}_{}.avi'.format(ID1,ID2),parameters=parameters,frames=final_frames_list,isColor=True)
-    utilis.write_video('Outputs\_binary_{}_{}.avi'.format(ID1,ID2),parameters=parameters,frames=final_masks_list,isColor=False)
+    utilis.write_video('Outputs/extracted_{}_{}.avi'.format(ID1,ID2),parameters=parameters,frames=final_frames_list,isColor=True)
+    utilis.write_video('Outputs/binary_{}_{}.avi'.format(ID1,ID2),parameters=parameters,frames=final_masks_list,isColor=False)
 
 
 

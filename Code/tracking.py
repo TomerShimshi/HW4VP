@@ -75,8 +75,8 @@ def tracking (input_video_path, Alpha_mask_path):
         tracik_dic.update({str(frame_idx):json_lst})
         pbar.update(1)
 
-    utilis.write_video('Outputs\Output_{}_{}.avi'.format(ID1,ID2),parameters=parameters,frames=tracked_frames_list,isColor=True)
-    with open("Outputs\Tracking.json", "w") as outfile:
+    utilis.write_video('Outputs/OUTPUT_{}_{}.avi'.format(ID1,ID2),parameters=parameters,frames=tracked_frames_list,isColor=True)
+    with open("Outputs/Tracking.json", "w") as outfile:
         json.dump(tracik_dic, outfile)
 
 
