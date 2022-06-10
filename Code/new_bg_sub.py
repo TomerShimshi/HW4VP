@@ -30,7 +30,7 @@ def background_subtraction(input_video_path):
     n_frames = len(frames_bgr)
     #create the backround subtractor
     num_iter = 10
-    fgbg = cv2.createBackgroundSubtractorKNN(history=int(num_iter)*n_frames,detectShadows=False,dist2Threshold =40)#45)#90.0)
+    fgbg = cv2.createBackgroundSubtractorKNN(history=int(num_iter)*n_frames,detectShadows=False,dist2Threshold =20)#40)#45)#90.0)
     mask_list = np.zeros((n_frames,parameters["height"],parameters['width']))
    
     print('started studing frames history')

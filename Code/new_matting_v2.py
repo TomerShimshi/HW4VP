@@ -56,14 +56,15 @@ def matting (input_video_path, BW_mask_path,bg_path):
 
         #add small offset to look at a larger image
 
-        mask_left_idx= max(0,mask_left_idx-OFFSET//3)
-        mask_right_idx = min(w,mask_right_idx+OFFSET//3)
-        mask_bottom_idx = min(h,mask_bottom_idx + OFFSET//3)
+        mask_left_idx= max(0,mask_left_idx-OFFSET//2)
+        mask_right_idx = min(w,mask_right_idx+OFFSET//2)
+        mask_bottom_idx = min(h,mask_bottom_idx + OFFSET//2)
         #INCREASE MOSTTLY AROUD THE HEAD EREA
         mask_top_idx = max(0,mask_top_idx-OFFSET)
         
         #resize the image to look just at a small window aroud the person        
         small_luma_frame = luma_frame[mask_top_idx:mask_bottom_idx,mask_left_idx:mask_right_idx]
+        #small_luma_frame = np.float32(small_luma_frame)
         small_bgr_frame = frame[mask_top_idx:mask_bottom_idx,mask_left_idx:mask_right_idx]
         small_mask = mask[mask_top_idx:mask_bottom_idx,mask_left_idx:mask_right_idx]
         small_new_bg = new_bg[mask_top_idx:mask_bottom_idx,mask_left_idx:mask_right_idx]
@@ -74,7 +75,7 @@ def matting (input_video_path, BW_mask_path,bg_path):
         
 
         fg_mask =cv2.erode(mask,kernel=kernel,iterations=constants.ERODE_N_ITER)#cv2.morphologyEx(small_mask,cv2.cv2.MORPH_OPEN, kernel=kernel,iterations=constants.ERODE_N_ITER)
-        small_fg_mask = fg_mask[mask_top_idx:mask_bottom_idx,mask_left_idx:mask_right_idx]
+        small_fg_mask = fg_mask[mask_top_idx:mask_bottom_idx,mask_left_idx:mask_right_idx].astype(np.uint8)
         
         #WE FIRST CALCULATE THE DIST MAP WITH THE SMALL FG MASK INSTED OF THE PROB MAP
         #WE TRIED ALEX METHOD AND ADDED THE CODE TO THE REPORT BUT WE GOT BAD RESULTS
@@ -94,15 +95,16 @@ def matting (input_video_path, BW_mask_path,bg_path):
         ### WE ADD EPSILON TO AVIOD ZERO DIV
         small_bg_dist_map[small_bg_dist_map==0]=constants.EPSILON
         small_fg_dist_map[small_fg_dist_map==0]=constants.EPSILON
+        denominator= np.add(small_fg_dist_map,small_bg_dist_map)
         #now we build the trimap zone
 
-        small_fg_dist_map = small_fg_dist_map/(small_fg_dist_map+small_bg_dist_map)
-        small_bg_dist_map = 1.0-small_fg_dist_map
+        small_fg_dist_map = small_fg_dist_map/denominator
+        small_bg_dist_map = small_bg_dist_map/denominator
         small_trimap_dist_map = (np.abs(small_bg_dist_map-small_fg_dist_map)<constants.EPSILON_SMALL_BAND)
         small_trimap_dist_map_idx = np.where(small_trimap_dist_map==1)
 
         small_accepted_fg_mask = (small_fg_dist_map<small_bg_dist_map).astype(np.uint8)
-        small_accepted_bg_mask = (small_bg_dist_map>=small_fg_dist_map).astype(np.uint8)
+        small_accepted_bg_mask = (small_bg_dist_map>small_fg_dist_map).astype(np.uint8)
       
         #NOW WE WANT TO BUILD THE KDE FOR THE BG AND FG TO CALC THE PRIOR FOR ALPHA
 
@@ -125,8 +127,8 @@ def matting (input_video_path, BW_mask_path,bg_path):
         PF = fg_pdf[small_blue_frame]
 
         #NOW we want to find Alpha
-        w_fg =PF[small_trimap_dist_map_idx]/ (np.power(small_fg_dist_map[small_trimap_dist_map_idx],constants.R))
-        w_bg = (PB[small_trimap_dist_map_idx]) /(np.power(small_bg_dist_map[small_trimap_dist_map_idx],constants.R))
+        w_fg =PF[small_trimap_dist_map_idx]* (np.power(small_fg_dist_map[small_trimap_dist_map_idx],-constants.R))
+        w_bg = PB[small_trimap_dist_map_idx]*(np.power(small_bg_dist_map[small_trimap_dist_map_idx],-constants.R))
         alpha = w_fg/(w_fg+w_bg)
 
         #$$$$$%%%%%test$$$$$%%%%%%%%
@@ -146,9 +148,9 @@ def matting (input_video_path, BW_mask_path,bg_path):
         matted_frame[mask_top_idx:mask_bottom_idx,mask_left_idx:mask_right_idx] = small_mated_frame
         matted_frames_list.append(matted_frame)  
 
-        alpha_frame = np.zeros(mask.shape) 
-       
-        alpha_frame[mask_top_idx:mask_bottom_idx,mask_left_idx:mask_right_idx] = small_alpha
+        alpha_frame = np.zeros(frame.shape) 
+        alpha_frame[mask_top_idx:mask_bottom_idx,mask_left_idx:mask_right_idx] = 1
+        alpha_frame[mask_top_idx:mask_bottom_idx,mask_left_idx:mask_right_idx] =utilis.use_mask_on_frame(frame=alpha_frame[mask_top_idx:mask_bottom_idx,mask_left_idx:mask_right_idx],mask=small_alpha).astype(np.uint8) #small_alpha
         alpha_frame= (alpha_frame*255).astype(np.uint8)
         alpha_frame_list.append(alpha_frame)   
 
@@ -167,7 +169,7 @@ def matting (input_video_path, BW_mask_path,bg_path):
     
     utilis.write_video('Outputs\matt_{}_{}.avi'.format(ID1,ID2),parameters=parameters,frames=matted_frames_list,isColor=True)
 
-    utilis.write_video('Outputs\_alpha_{}_{}.avi'.format(ID1,ID2),parameters=parameters,frames=alpha_frame_list,isColor=False)
+    utilis.write_video('Outputs\_alpha_{}_{}.avi'.format(ID1,ID2),parameters=parameters,frames=alpha_frame_list,isColor=True)
     end = time.time()
     print('matting took {}'.format(end-start))
 

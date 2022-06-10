@@ -110,7 +110,6 @@ def matting (input_video_path, BW_mask_path,bg_path):
         PF = PF /(PF+PB)
         PB= 1.0-PF
 
-   
         
         small_fg_probs_for_dist =cv2.normalize(src=PF, dst=None, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_8U) #np.rint(255*small_bg_probs/(np.max(small_bg_probs) - np.min(small_bg_probs)),dtype= uint8)
         small_bg_probs_for_dist =cv2.normalize(src=PB, dst=None, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_8U)
@@ -148,8 +147,8 @@ def matting (input_video_path, BW_mask_path,bg_path):
         #now we buikd the dist map
 
         
-        small_bg_dist_map = GeodisTK.geodesic2d_raster_scan(small_luma_frame,small_bg_probs_for_dist,1.0,constants.GEO_N_ITER)
-        small_fg_dist_map = GeodisTK.geodesic2d_raster_scan(small_luma_frame,small_fg_probs_for_dist,1.0,constants.GEO_N_ITER)
+        small_bg_dist_map = GeodisTK.geodesic2d_raster_scan(np.float32(small_luma_frame),small_bg_probs_for_dist,1.0,constants.GEO_N_ITER)
+        small_fg_dist_map = GeodisTK.geodesic2d_raster_scan(np.float32(small_luma_frame),small_fg_probs_for_dist,1.0,constants.GEO_N_ITER)
         #small_bg_probs = cv2.resize(small_bg_probs,(small_luma_frame.shape[1],small_luma_frame.shape[0]))
         #small_fg_probs = cv2.resize(small_fg_probs,(small_luma_frame.shape[1],small_luma_frame.shape[0]))
         #accourding to alex:
