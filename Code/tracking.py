@@ -43,10 +43,10 @@ def tracking (input_video_path, Alpha_mask_path):
         json_lst.append(int(x_mean))
         json_lst.append(int(y_mean))
         #close a small rectangle over the alpha image
-        mask_x_axis = np.where(mask ==1)[1]
+        mask_x_axis = np.where(mask >0.71)[1]
         mask_left_idx =np.min(mask_x_axis)
         mask_right_idx = np.max(mask_x_axis)
-        mask_y_axis = np.where(mask ==1)[0]
+        mask_y_axis = np.where(mask >0.71)[0]
         mask_top_idx = np.min(mask_y_axis)
         mask_bottom_idx = np.max(mask_y_axis)
         
